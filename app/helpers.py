@@ -61,7 +61,7 @@ def site_dict(s: ClientSite | None) -> dict:
     }
 
 
-def checkpoint_dict(cp: PatrolCheckpoint | None) -> dict:
+def checkpoint_dict(cp: PatrolCheckpoint | None, *, qr_url: str = "") -> dict:
     if not cp:
         return {}
     return {
@@ -70,6 +70,10 @@ def checkpoint_dict(cp: PatrolCheckpoint | None) -> dict:
         "name": cp.name,
         "description": cp.description,
         "sort_order": cp.sort_order,
+        "qr_token": cp.qr_token or "",
+        "qr_url": qr_url,
+        "lat": cp.lat,
+        "lng": cp.lng,
         "active": cp.active,
     }
 

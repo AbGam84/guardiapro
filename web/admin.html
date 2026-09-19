@@ -19,6 +19,8 @@
     <div class="tabs" id="tabs">
       <button class="tab active" data-tab="dash">Resumen</button>
       <button class="tab" data-tab="shifts">Bitácoras</button>
+      <button class="tab" data-tab="patrol">Recorridos</button>
+      <button class="tab" data-tab="qr">QR rondas</button>
       <button class="tab" data-tab="assign">Programación</button>
       <button class="tab" data-tab="sites">Sitios</button>
       <button class="tab" data-tab="settings">Ajustes</button>
@@ -48,6 +50,47 @@
         <p class="muted" id="detailTitle"></p>
         <a class="btn btn-ghost" id="pdfLink" target="_blank">Imprimir / PDF</a>
         <div class="log-list" id="detailLogs" style="margin-top:12px"></div>
+      </div>
+    </div>
+
+    <div id="tab-patrol" class="tab-panel hidden">
+      <div class="panel">
+        <h2>Reportes de recorrido</h2>
+        <p class="muted">Distancia GPS, marcas QR y lugares visitados por oficial — para área administrativa.</p>
+        <div class="form-grid two-col" style="margin:12px 0">
+          <label>Oficial (opcional)<select id="patrolGuard"><option value="">Todos</option></select></label>
+          <label>Período
+            <select id="patrolPeriod">
+              <option value="weekly">Semanal (7 días)</option>
+              <option value="biweekly">Quincenal (15 días)</option>
+            </select>
+          </label>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <a class="btn btn-primary" id="patrolPrint" target="_blank">Imprimir / PDF</a>
+          <button class="btn btn-ghost" type="button" id="patrolRefresh">Ver resumen</button>
+        </div>
+        <div id="patrolSummary" style="margin-top:16px"></div>
+      </div>
+    </div>
+
+    <div id="tab-qr" class="tab-panel hidden">
+      <div class="panel">
+        <h2>Códigos QR para imprimir</h2>
+        <p class="muted">Imprima y pegue en muros. El oficial escanea con su celular y queda registrado lugar, hora y distancia de recorrido.</p>
+        <label>Sitio<select id="qrSite"></select></label>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+          <a class="btn btn-primary" id="qrPrint" target="_blank">Imprimir hoja QR</a>
+        </div>
+        <hr style="border-color:var(--border);margin:16px 0" />
+        <h3>Nuevo punto de ronda</h3>
+        <form id="cpForm" class="form-grid">
+          <input type="hidden" name="site_id" id="cpSiteId" />
+          <label>Nombre del punto<input name="name" required placeholder="Entrada norte" /></label>
+          <label>Descripción<input name="description" placeholder="Junto al portón" /></label>
+          <button class="btn btn-primary" type="submit">Crear punto + QR</button>
+        </form>
+        <div id="cpList" style="margin-top:16px"></div>
       </div>
     </div>
 
@@ -155,7 +198,51 @@
       document.getElementById("siteList").innerHTML = d.sites.map(s =>
         `<div style="padding:8px 0;border-bottom:1px solid var(--border)"><strong>${s.name}</strong><br><span class="muted">${s.address} · ${s.client_name}</span></div>`
       ).join("");
-      document.getElementById("sitePick").innerHTML = d.sites.map(s => `<option value="${s.id}">${s.name}</option>`).join("");
+      const opts = d.sites.map(s => `<option value="${s.id}">${s.name}</option>`).join("");
+      document.getElementById("sitePick").innerHTML = opts;
+      document.getElementById("qrSite").innerHTML = opts;
+      if (d.sites[0]) {
+        document.getElementById("cpSiteId").value = d.sites[0].id;
+        updateQrLinks();
+        loadCheckpointsAdmin(d.sites[0].id);
+      }
+    }
+
+    function updateQrLinks() {
+      const sid = document.getElementById("qrSite").value;
+      document.getElementById("cpSiteId").value = sid;
+      document.getElementById("qrPrint").href = `/api/sites/${sid}/qr-print`;
+      loadCheckpointsAdmin(sid);
+    }
+
+    async function loadCheckpointsAdmin(siteId) {
+      const d = await api(`/api/sites/${siteId}/checkpoints`);
+      document.getElementById("cpList").innerHTML = (d.checkpoints || []).map(cp =>
+        `<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px">
+          <img src="/api/checkpoints/${cp.id}/qr.png" width="64" height="64" alt="QR"/>
+          <div><strong>${cp.name}</strong><br><span class="muted">${cp.description || ""}</span></div>
+        </div>`
+      ).join("") || "<p class='muted'>Sin puntos. Cree uno abajo.</p>";
+    }
+
+    async function loadPatrolSummary() {
+      const period = document.getElementById("patrolPeriod").value;
+      const gid = document.getElementById("patrolGuard").value;
+      let url = `/api/reports/patrol?period=${period}`;
+      if (gid) url += `&guard_id=${gid}`;
+      document.getElementById("patrolPrint").href = `/api/reports/patrol/print?period=${period}` + (gid ? `&guard_id=${gid}` : "");
+      const d = await api(url);
+      document.getElementById("patrolSummary").innerHTML = `
+        <div class="stats">
+          <div class="stat"><span class="muted">Turnos</span><b>${d.shift_count || 0}</b></div>
+          <div class="stat"><span class="muted">Distancia total</span><b>${d.total_distance_label || "0 m"}</b></div>
+        </div>
+        <table class="table" style="margin-top:12px"><thead><tr>
+          <th>Oficial</th><th>Turnos</th><th>Marcas QR</th><th>Recorrido</th><th>Sitios</th>
+        </tr></thead><tbody>${(d.guards || []).map(g => `<tr>
+          <td>${g.guard?.name}<br><span class="muted">${g.guard?.badge || ""}</span></td>
+          <td>${g.shifts}</td><td>${g.checkpoint_marks}</td><td>${g.total_distance_label}</td>
+          <td>${(g.sites || []).join(", ") || "—"}</td></tr>`).join("") || "<tr><td colspan='5'>Sin datos</td></tr>"}</tbody></table>`;
     }
 
     async function init() {
@@ -165,9 +252,24 @@
       document.getElementById("setWa").value = me.company.alert_whatsapp || "";
       document.querySelector('[name="shift_date"]').value = new Date().toISOString().slice(0, 10);
       const g = await api("/api/guards");
-      document.getElementById("guardPick").innerHTML = g.guards.map(u => `<option value="${u.id}">${u.name}</option>`).join("");
-      await Promise.all([loadDash(), loadShifts(), loadAssign(), loadSites()]);
+      const gopts = g.guards.map(u => `<option value="${u.id}">${u.name}</option>`).join("");
+      document.getElementById("guardPick").innerHTML = gopts;
+      document.getElementById("patrolGuard").innerHTML = '<option value="">Todos</option>' + gopts;
+      await Promise.all([loadDash(), loadShifts(), loadAssign(), loadSites(), loadPatrolSummary()]);
     }
+
+    document.getElementById("qrSite").onchange = updateQrLinks;
+    document.getElementById("patrolRefresh").onclick = loadPatrolSummary;
+    document.getElementById("patrolPeriod").onchange = loadPatrolSummary;
+    document.getElementById("patrolGuard").onchange = loadPatrolSummary;
+    document.getElementById("cpForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      await api("/api/checkpoints", { method: "POST", body: JSON.stringify(Object.fromEntries(fd)) });
+      e.target.reset();
+      document.getElementById("cpSiteId").value = document.getElementById("qrSite").value;
+      updateQrLinks();
+    };
 
     document.getElementById("assignForm").onsubmit = async (e) => {
       e.preventDefault();

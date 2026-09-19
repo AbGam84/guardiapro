@@ -6,3 +6,4 @@ python-multipart==0.0.20
 python-jose[cryptography]==3.3.0
 aiofiles==24.1.0
 psycopg[binary]==3.2.3
+qrcode[pil]==8.0

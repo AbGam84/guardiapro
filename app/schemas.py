@@ -41,6 +41,14 @@ class CheckpointIn(BaseModel):
     name: str
     description: str = ""
     sort_order: int = 0
+    lat: float | None = None
+    lng: float | None = None
+
+
+class QrScanIn(BaseModel):
+    qr_token: str
+    lat: float | None = None
+    lng: float | None = None
 
 
 class AssignmentIn(BaseModel):

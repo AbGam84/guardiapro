@@ -1,0 +1,86 @@
+GUARDIAPRO — PUBLICAR EN INTERNET (FUERA DE WIFI)
+=================================================
+
+LINK FINAL DEL CLIENTE (cuando esté Live):
+  https://guardiapro.onrender.com/guardia
+
+Admin:
+  https://guardiapro.onrender.com/admin
+  usuario: admin  clave: Admin2026!
+
+Vendor (multi-empresa):
+  https://guardiapro.onrender.com/vendor
+
+
+PASO 1 — SUBIR CÓDIGO A GITHUB
+------------------------------
+Doble clic:
+  C:\Users\PC\Documents\GuardiaPro\Publicar-En-La-Nube.bat
+
+Espera que diga "Subiendo a GitHub..." sin error.
+
+
+PASO 2 — ENTRAR A RENDER
+------------------------
+1) Abra: https://dashboard.render.com/login
+2) Entre con GitHub → cuenta AbGam84
+
+
+PASO 3 — CREAR EL SERVICIO (Blueprint)
+--------------------------------------
+1) Abra: https://dashboard.render.com/blueprints/new?repo=https://github.com/AbGam84/guardiapro
+2) Render detecta render.yaml → servicio "guardiapro"
+3) CLICK: Apply  (o Create / Confirm)
+4) Espere 5-10 minutos hasta estado LIVE (verde)
+
+
+PASO 4 — PROBAR
+---------------
+1) Abra: https://guardiapro.onrender.com/api/health
+   Debe decir: {"ok":true,"product":"GuardiaPro"...}
+2) Login guardia: https://guardiapro.onrender.com/guardia
+   juan / Guardia2026!
+3) Admin QR + reportes: https://guardiapro.onrender.com/admin
+   Pestaña "QR rondas" → imprimir
+   Pestaña "Recorridos" → semanal / quincenal
+
+
+SI BLUEPRINT NO APARECE — CREAR MANUAL
+--------------------------------------
+Render → New → Web Service
+  Repo: AbGam84/guardiapro
+  Name: guardiapro
+  Build:  pip install -r requirements.txt
+  Start:  uvicorn app.main:app --host 0.0.0.0 --port $PORT
+  Health: /api/health
+  Variables:
+    ENVIRONMENT=production
+    GUARDIA_DATA_DIR=/tmp/guardiapro-data
+    GUARDIA_ADMIN_PASSWORD=Admin2026!
+    GUARDIA_VENDOR_PASSWORD=GuardiaVendor2026!
+
+
+CÓDIGOS QR DE RONDA (NUEVO)
+---------------------------
+1) Admin → pestaña "QR rondas"
+2) Elija sitio → "Imprimir hoja QR"
+3) Pegue códigos en muros del condominio/bodega
+4) Oficial escanea con celular (GuardiaPro → cámara QR)
+5) Queda: hora, lugar GPS, distancia entre marcas
+
+
+REPORTES ADMINISTRATIVOS
+------------------------
+Admin → pestaña "Recorridos"
+  • Semanal (7 días)
+  • Quincenal (15 días)
+  • Imprimir / PDF para área administrativa
+  • Muestra: oficial, turnos, marcas QR, km recorridos, sitios
+
+
+MIENTRAS RENDER NO ESTÉ LIVE — TÚNEL TEMPORAL
+---------------------------------------------
+1) Iniciar-GuardiaPro.bat
+2) Abrir-Fuera-De-WiFi.bat
+3) Copiar link trycloudflare.com/guardia al celular
+   (solo funciona con PC encendida)

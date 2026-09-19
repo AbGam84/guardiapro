@@ -6,7 +6,7 @@ from typing import Annotated
 from urllib.parse import quote
 
 import aiofiles
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -46,13 +46,18 @@ from app.models import (
     ShiftAssignment,
     User,
 )
-from app.reports import shift_report_html
+from app.geo import format_distance
+from app.migrate import ensure_schema
+from app.patrol_stats import patrol_period_stats, shift_patrol_stats
+from app.qr_util import checkpoint_scan_url, qr_png
+from app.reports import patrol_report_html, shift_report_html
 from app.schemas import (
     AssignmentIn,
     CheckpointIn,
     CompanySettingsIn,
     LogEntryIn,
     LoginIn,
+    QrScanIn,
     ShiftEndIn,
     ShiftStartIn,
     SiteIn,
@@ -68,6 +73,7 @@ WEB = ROOT / "web"
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    ensure_schema(engine)
     db = next(get_db())
     try:
         seed_if_empty(db)
@@ -92,6 +98,12 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory=WEB / "static"), name="static")
 app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 app.include_router(vendor_router)
+
+
+def _public_base(request: Request) -> str:
+    if PUBLIC_BASE_URL:
+        return PUBLIC_BASE_URL
+    return str(request.base_url).rstrip("/")
 
 
 def _company(db: Session, user: User) -> Company:
@@ -220,9 +232,11 @@ def create_site(
 @app.get("/api/sites/{site_id}/checkpoints")
 def list_checkpoints(
     site_id: int,
+    request: Request,
     user: Annotated[User, Depends(get_current_user)],
     db: Session = Depends(get_db),
 ):
+    base = _public_base(request)
     rows = (
         db.query(PatrolCheckpoint)
         .filter(
@@ -233,12 +247,18 @@ def list_checkpoints(
         .order_by(PatrolCheckpoint.sort_order.asc())
         .all()
     )
-    return {"checkpoints": [checkpoint_dict(c) for c in rows]}
+    return {
+        "checkpoints": [
+            checkpoint_dict(c, qr_url=checkpoint_scan_url(base, c.qr_token) if c.qr_token else "")
+            for c in rows
+        ]
+    }
 
 
 @app.post("/api/checkpoints")
 def create_checkpoint(
     payload: CheckpointIn,
+    request: Request,
     user: Annotated[User, Depends(require_roles("admin", "supervisor"))],
     db: Session = Depends(get_db),
 ):
@@ -255,11 +275,168 @@ def create_checkpoint(
         name=payload.name.strip(),
         description=payload.description.strip(),
         sort_order=payload.sort_order,
+        qr_token=uuid.uuid4().hex,
+        lat=payload.lat,
+        lng=payload.lng,
     )
     db.add(row)
     db.commit()
     db.refresh(row)
-    return {"checkpoint": checkpoint_dict(row)}
+    base = _public_base(request)
+    return {"checkpoint": checkpoint_dict(row, qr_url=checkpoint_scan_url(base, row.qr_token))}
+
+
+@app.post("/api/checkpoints/scan")
+def scan_checkpoint_qr(
+    payload: QrScanIn,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Session = Depends(get_db),
+):
+    token = (payload.qr_token or "").strip()
+    if not token:
+        raise HTTPException(status_code=400, detail="QR inválido")
+    cp = (
+        db.query(PatrolCheckpoint)
+        .filter(
+            PatrolCheckpoint.qr_token == token,
+            PatrolCheckpoint.company_id == user.company_id,
+            PatrolCheckpoint.active.is_(True),
+        )
+        .first()
+    )
+    if not cp:
+        raise HTTPException(status_code=404, detail="Punto de control no encontrado")
+    sh = (
+        db.query(Shift)
+        .filter(Shift.guard_id == user.id, Shift.status == "open", Shift.company_id == user.company_id)
+        .order_by(Shift.started_at.desc())
+        .first()
+    )
+    if not sh:
+        raise HTTPException(status_code=400, detail="Debe tener un turno abierto para marcar QR")
+    if sh.site_id != cp.site_id:
+        raise HTTPException(status_code=400, detail=f"Este QR es de otro sitio. Turno actual: sitio #{sh.site_id}")
+    site = db.query(ClientSite).filter(ClientSite.id == sh.site_id).first()
+    dist_note = ""
+    last_cp = (
+        db.query(LogEntry)
+        .filter(
+            LogEntry.shift_id == sh.id,
+            LogEntry.entry_type == "checkpoint",
+            LogEntry.lat.isnot(None),
+            LogEntry.lng.isnot(None),
+        )
+        .order_by(LogEntry.created_at.desc())
+        .first()
+    )
+    if last_cp and payload.lat is not None and payload.lng is not None:
+        from app.geo import haversine_m
+
+        seg = haversine_m(last_cp.lat, last_cp.lng, payload.lat, payload.lng)
+        dist_note = f" · +{format_distance(seg)} desde marca anterior"
+    entry = LogEntry(
+        company_id=user.company_id,
+        shift_id=sh.id,
+        guard_id=user.id,
+        checkpoint_id=cp.id,
+        entry_type="checkpoint",
+        note=f"QR: {cp.name} @ {site.name if site else ''}{dist_note}",
+        lat=payload.lat,
+        lng=payload.lng,
+    )
+    db.add(entry)
+    db.commit()
+    db.refresh(entry)
+    stats = shift_patrol_stats(db, sh)
+    return {
+        "ok": True,
+        "message": f"Marca registrada: {cp.name}",
+        "checkpoint": checkpoint_dict(cp),
+        "entry": log_dict(entry),
+        "patrol": {
+            "total_distance_label": stats["total_distance_label"],
+            "checkpoint_marks": stats["checkpoint_marks"],
+        },
+    }
+
+
+@app.get("/api/checkpoints/{checkpoint_id}/qr.png")
+def checkpoint_qr_png(
+    checkpoint_id: int,
+    request: Request,
+    user: Annotated[User, Depends(require_roles("admin", "supervisor"))],
+    db: Session = Depends(get_db),
+):
+    cp = (
+        db.query(PatrolCheckpoint)
+        .filter(PatrolCheckpoint.id == checkpoint_id, PatrolCheckpoint.company_id == user.company_id)
+        .first()
+    )
+    if not cp or not cp.qr_token:
+        raise HTTPException(status_code=404, detail="Checkpoint no encontrado")
+    url = checkpoint_scan_url(_public_base(request), cp.qr_token)
+    return Response(content=qr_png(url), media_type="image/png")
+
+
+@app.get("/api/sites/{site_id}/qr-print")
+def site_qr_print_sheet(
+    site_id: int,
+    request: Request,
+    user: Annotated[User, Depends(require_roles("admin", "supervisor"))],
+    db: Session = Depends(get_db),
+):
+    site = (
+        db.query(ClientSite)
+        .filter(ClientSite.id == site_id, ClientSite.company_id == user.company_id)
+        .first()
+    )
+    if not site:
+        raise HTTPException(status_code=404, detail="Sitio no encontrado")
+    company = _company(db, user)
+    base = _public_base(request)
+    rows = (
+        db.query(PatrolCheckpoint)
+        .filter(
+            PatrolCheckpoint.site_id == site_id,
+            PatrolCheckpoint.company_id == user.company_id,
+            PatrolCheckpoint.active.is_(True),
+        )
+        .order_by(PatrolCheckpoint.sort_order.asc())
+        .all()
+    )
+    cards = ""
+    for cp in rows:
+        if not cp.qr_token:
+            continue
+        url = checkpoint_scan_url(base, cp.qr_token)
+        img_b64 = __import__("base64").b64encode(qr_png(url, box_size=6)).decode()
+        cards += f"""
+        <div class="card">
+          <img src="data:image/png;base64,{img_b64}" alt="QR {cp.name}"/>
+          <h3>{cp.name}</h3>
+          <p>{cp.description or site.name}</p>
+          <p class="muted">Pegue en muro · escaneo con celular del oficial</p>
+        </div>"""
+    html = f"""<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/>
+<title>QR rondas — {site.name}</title>
+<style>
+body{{font-family:Segoe UI,sans-serif;margin:20px;color:#111}}
+h1{{margin:0 0 4px}} .meta{{color:#555;margin-bottom:20px}}
+.grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}}
+.card{{border:2px dashed #333;border-radius:12px;padding:16px;text-align:center;page-break-inside:avoid}}
+.card img{{width:180px;height:180px}}
+.card h3{{margin:10px 0 4px;font-size:1rem}}
+.card p{{margin:0;font-size:.85rem}}
+.muted{{color:#666;font-size:.75rem;margin-top:8px}}
+@media print{{button{{display:none}} .card{{break-inside:avoid}}}}
+</style></head><body>
+<button onclick="window.print()">Imprimir hoja QR</button>
+<h1>Puntos de ronda — QR</h1>
+<p class="meta"><strong>{company.name}</strong> · {site.name} · {site.address or ""}<br>
+Oficial escanea con GuardiaPro → registra lugar, hora y distancia de recorrido.</p>
+<div class="grid">{cards or "<p>Sin checkpoints. Créelos en Admin → Sitios.</p>"}</div>
+</body></html>"""
+    return HTMLResponse(html)
 
 
 @app.get("/api/assignments")
@@ -550,6 +727,43 @@ def shift_report(
     if user.role == "guard" and sh.guard_id != user.id:
         raise HTTPException(status_code=403, detail="Sin permiso")
     html = shift_report_html(db, shift_id, user.company_id)
+    return HTMLResponse(html)
+
+
+@app.get("/api/shifts/{shift_id}/patrol")
+def shift_patrol(
+    shift_id: int,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Session = Depends(get_db),
+):
+    sh = db.query(Shift).filter(Shift.id == shift_id, Shift.company_id == user.company_id).first()
+    if not sh:
+        raise HTTPException(status_code=404, detail="Turno no encontrado")
+    if user.role == "guard" and sh.guard_id != user.id:
+        raise HTTPException(status_code=403, detail="Sin permiso")
+    return shift_patrol_stats(db, sh)
+
+
+@app.get("/api/reports/patrol")
+def patrol_report_json(
+    user: Annotated[User, Depends(require_roles("admin", "supervisor"))],
+    db: Session = Depends(get_db),
+    period: str = "weekly",
+    guard_id: int = 0,
+):
+    days = 15 if period.strip().lower() in {"biweekly", "quincenal", "15", "quince"} else 7
+    return patrol_period_stats(db, user.company_id, days=days, guard_id=guard_id)
+
+
+@app.get("/api/reports/patrol/print")
+def patrol_report_print(
+    user: Annotated[User, Depends(require_roles("admin", "supervisor"))],
+    db: Session = Depends(get_db),
+    period: str = "weekly",
+    guard_id: int = 0,
+):
+    days = 15 if period.strip().lower() in {"biweekly", "quincenal", "15", "quince"} else 7
+    html = patrol_report_html(db, user.company_id, days=days, guard_id=guard_id)
     return HTMLResponse(html)
 
 

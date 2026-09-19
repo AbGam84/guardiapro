@@ -1,3 +1,4 @@
+import uuid
 from datetime import date
 
 from sqlalchemy.orm import Session
@@ -86,12 +87,12 @@ def seed_if_empty(db: Session) -> None:
     db.flush()
 
     checkpoints = [
-        PatrolCheckpoint(company_id=company.id, site_id=sites[0].id, name="Entrada principal", sort_order=1),
-        PatrolCheckpoint(company_id=company.id, site_id=sites[0].id, name="Estacionamiento", sort_order=2),
-        PatrolCheckpoint(company_id=company.id, site_id=sites[0].id, name="Piscina / área común", sort_order=3),
-        PatrolCheckpoint(company_id=company.id, site_id=sites[0].id, name="Perimeter norte", sort_order=4),
-        PatrolCheckpoint(company_id=company.id, site_id=sites[1].id, name="Portón carga", sort_order=1),
-        PatrolCheckpoint(company_id=company.id, site_id=sites[1].id, name="Bodega interior", sort_order=2),
+        PatrolCheckpoint(company_id=company.id, site_id=sites[0].id, name="Entrada principal", sort_order=1, qr_token=uuid.uuid4().hex),
+        PatrolCheckpoint(company_id=company.id, site_id=sites[0].id, name="Estacionamiento", sort_order=2, qr_token=uuid.uuid4().hex),
+        PatrolCheckpoint(company_id=company.id, site_id=sites[0].id, name="Piscina / área común", sort_order=3, qr_token=uuid.uuid4().hex),
+        PatrolCheckpoint(company_id=company.id, site_id=sites[0].id, name="Perimeter norte", sort_order=4, qr_token=uuid.uuid4().hex),
+        PatrolCheckpoint(company_id=company.id, site_id=sites[1].id, name="Portón carga", sort_order=1, qr_token=uuid.uuid4().hex),
+        PatrolCheckpoint(company_id=company.id, site_id=sites[1].id, name="Bodega interior", sort_order=2, qr_token=uuid.uuid4().hex),
     ]
     db.add_all(checkpoints)
 

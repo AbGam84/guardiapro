@@ -41,7 +41,20 @@
       </div>
 
       <div class="panel" style="margin-bottom:12px">
-        <h2 style="margin:0 0 8px;font-size:1rem">Puntos de ronda</h2>
+        <h2 style="margin:0 0 8px;font-size:1rem">Escanear QR de ronda</h2>
+        <p class="muted" style="margin:0 0 8px;font-size:.85rem">Apunte al código impreso en el muro. Registra lugar, hora y distancia.</p>
+        <div id="qrReader" style="max-width:100%;border-radius:10px;overflow:hidden"></div>
+        <p id="qrStatus" class="muted" style="margin-top:8px;font-size:.85rem">—</p>
+        <button class="btn btn-ghost btn-block" type="button" id="toggleQr" style="margin-top:8px">Activar cámara QR</button>
+      </div>
+
+      <div class="panel" style="margin-bottom:12px">
+        <h2 style="margin:0 0 8px;font-size:1rem">Recorrido del turno</h2>
+        <div id="patrolStats" class="stats" style="grid-template-columns:1fr 1fr"></div>
+      </div>
+
+      <div class="panel" style="margin-bottom:12px">
+        <h2 style="margin:0 0 8px;font-size:1rem">Puntos de ronda (toque manual)</h2>
         <div id="checkpointList" class="chips"></div>
       </div>
 
@@ -86,11 +99,92 @@
       </div>
     </div>
   </div>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="/static/js/api.js"></script>
   <script>
     let shift = null;
     let checkpoints = [];
+    let qrScanner = null;
+    let qrActive = false;
     const types = ["ronda", "checkpoint", "incidente", "novedad"];
+
+    async function getGps() {
+      try {
+        const pos = await new Promise((ok, bad) => navigator.geolocation.getCurrentPosition(ok, bad, { timeout: 5000, enableHighAccuracy: true }));
+        return { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      } catch (_) { return { lat: null, lng: null }; }
+    }
+
+    function flashQr(msg, ok) {
+      const el = document.getElementById("qrStatus");
+      el.textContent = msg;
+      el.style.color = ok ? "var(--ok)" : "var(--danger)";
+    }
+
+    async function scanQrToken(token) {
+      if (!shift || !token) return;
+      flashQr("Registrando marca…", true);
+      const gps = await getGps();
+      try {
+        const d = await api("/api/checkpoints/scan", {
+          method: "POST",
+          body: JSON.stringify({ qr_token: token, lat: gps.lat, lng: gps.lng }),
+        });
+        flashQr("✓ " + (d.message || "Marca OK") + " · " + (d.patrol?.total_distance_label || ""), true);
+        showShift((await api(`/api/shifts/${shift.id}`)).shift);
+      } catch (ex) {
+        flashQr(ex.message || "Error al escanear", false);
+      }
+    }
+
+    async function toggleQrCamera() {
+      const btn = document.getElementById("toggleQr");
+      if (qrActive && qrScanner) {
+        await qrScanner.stop().catch(() => {});
+        qrScanner.clear();
+        qrScanner = null;
+        qrActive = false;
+        btn.textContent = "Activar cámara QR";
+        document.getElementById("qrReader").innerHTML = "";
+        return;
+      }
+      if (!shift) { flashQr("Inicie turno primero", false); return; }
+      qrScanner = new Html5Qrcode("qrReader");
+      btn.textContent = "Detener cámara";
+      qrActive = true;
+      try {
+        await qrScanner.start(
+          { facingMode: "environment" },
+          { fps: 8, qrbox: { width: 220, height: 220 } },
+          (text) => {
+            let token = text;
+            try {
+              const u = new URL(text);
+              token = u.searchParams.get("qr") || text.split("qr=")[1]?.split("&")[0] || text;
+            } catch (_) {
+              if (text.includes("qr=")) token = text.split("qr=")[1].split("&")[0];
+            }
+            scanQrToken(token.trim());
+          }
+        );
+        flashQr("Cámara activa — apunte al QR impreso", true);
+      } catch (ex) {
+        flashQr("No se pudo abrir cámara: " + (ex.message || ex), false);
+        qrActive = false;
+        btn.textContent = "Activar cámara QR";
+      }
+    }
+
+    async function loadPatrolStats() {
+      const box = document.getElementById("patrolStats");
+      if (!shift) { box.innerHTML = ""; return; }
+      try {
+        const p = await api(`/api/shifts/${shift.id}/patrol`);
+        box.innerHTML = `
+          <div class="stat"><span class="muted">Recorrido</span><b>${p.total_distance_label || "0 m"}</b></div>
+          <div class="stat"><span class="muted">Marcas QR</span><b>${p.checkpoint_marks || 0}</b></div>`;
+      } catch (_) { box.innerHTML = ""; }
+    }
 
     document.getElementById("logout").onclick = () => { setToken(""); location.href = "/login"; };
 
@@ -116,9 +210,16 @@
       box.querySelectorAll(".chip").forEach(btn => {
         btn.onclick = async () => {
           if (!shift) return;
+          const gps = await getGps();
           await api(`/api/shifts/${shift.id}/log`, {
             method: "POST",
-            body: JSON.stringify({ entry_type: "checkpoint", checkpoint_id: Number(btn.dataset.cp), note: "Checkpoint: " + btn.textContent }),
+            body: JSON.stringify({
+              entry_type: "checkpoint",
+              checkpoint_id: Number(btn.dataset.cp),
+              note: "Checkpoint manual: " + btn.textContent,
+              lat: gps.lat,
+              lng: gps.lng,
+            }),
           });
           const u = await api(`/api/shifts/${shift.id}`);
           showShift(u.shift);
@@ -130,11 +231,15 @@
       shift = sh;
       document.getElementById("noShift").classList.toggle("hidden", !!sh);
       document.getElementById("activeShift").classList.toggle("hidden", !sh);
-      if (!sh) return;
+      if (!sh) {
+        if (qrActive && qrScanner) toggleQrCamera();
+        return;
+      }
       document.getElementById("siteName").textContent = sh.site?.name || "";
       document.getElementById("shiftStarted").textContent = "Desde " + fmt(sh.started_at);
       renderLogs(sh.logs);
       loadCheckpoints(sh.site?.id);
+      loadPatrolStats();
     }
 
     document.getElementById("typeChips").innerHTML = types.map((t,i) =>
@@ -176,15 +281,14 @@
       }
     };
 
+    document.getElementById("toggleQr").onclick = toggleQrCamera;
+
     document.getElementById("logForm").onsubmit = async (e) => {
       e.preventDefault();
       if (!shift) return;
       const fd = new FormData(e.target);
-      let lat = null, lng = null;
-      try {
-        const pos = await new Promise((ok, bad) => navigator.geolocation.getCurrentPosition(ok, bad, { timeout: 4000 }));
-        lat = pos.coords.latitude; lng = pos.coords.longitude;
-      } catch (_) {}
+      const gps = await getGps();
+      const lat = gps.lat, lng = gps.lng;
       try {
         const d = await api(`/api/shifts/${shift.id}/log`, {
           method: "POST",
@@ -232,7 +336,20 @@
       await init();
     };
 
-    init().catch(() => { setToken(""); location.href = "/login"; });
+    async function handleQrFromUrl() {
+      const params = new URLSearchParams(location.search);
+      const token = params.get("qr");
+      if (!token) return;
+      const active = await api("/api/shifts/active");
+      if (active.shift) {
+        await scanQrToken(token);
+        history.replaceState({}, "", "/guardia");
+      }
+    }
+
+    init()
+      .then(() => handleQrFromUrl())
+      .catch(() => { setToken(""); location.href = "/login?next=" + encodeURIComponent(location.pathname + location.search); });
   </script>
 </body>
 </html>
