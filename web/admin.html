@@ -257,6 +257,20 @@
           <div class="full"><button class="btn btn-primary" type="submit">Crear oficial</button></div>
         </form>
       </div>
+      <div class="panel" style="margin-top:16px">
+        <h2>Portal cliente</h2>
+        <p class="muted">Usuario solo lectura para el condominio o empresa que contrata la seguridad. Debe existir un <strong>sitio</strong> antes.</p>
+        <div id="clientAdminList"></div>
+        <hr style="border-color:var(--border);margin:16px 0" />
+        <h3>Nuevo usuario cliente</h3>
+        <form id="clientForm" class="form-grid two-col">
+          <label>Sitio que ve el cliente<select name="client_site_id" id="clientSitePick" required></select></label>
+          <label>Nombre / junta<input name="name" required placeholder="Administración condominio" /></label>
+          <label>Usuario (login)<input name="username" required placeholder="jaco_admin" autocomplete="off" /></label>
+          <label>Clave inicial<input name="password" type="password" required minlength="8" /></label>
+          <div class="full"><button class="btn btn-primary" type="submit">Crear acceso cliente</button></div>
+        </form>
+      </div>
     </div>
   </div>
   <script src="/static/js/api.js"></script>
@@ -479,6 +493,21 @@
       ).join("") || "<p class='muted'>Sin oficiales. Cree el primero abajo.</p>";
     }
 
+    async function loadClientAdmin() {
+      const sites = (await api("/api/sites")).sites || [];
+      const siteOpts = sites.map(s => `<option value="${s.id}">${s.name}</option>`).join("");
+      document.getElementById("clientSitePick").innerHTML =
+        siteOpts || '<option value="">— Cree un sitio primero —</option>';
+      const users = (await api("/api/users")).users || [];
+      const clients = users.filter(u => u.role === "client");
+      document.getElementById("clientAdminList").innerHTML = clients.map(u =>
+        `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
+          <strong>${u.name}</strong> · <code>${u.username}</code>
+          <br><span class="muted">Entra en /cliente · sitio #${u.client_site_id || "—"}</span>
+        </div>`
+      ).join("") || "<p class='muted'>Sin usuarios cliente. Cree uno abajo (requiere sitio).</p>";
+    }
+
     async function init() {
       const me = await api("/api/auth/me");
       document.getElementById("hello").textContent = `${me.user.name} · ${me.company.name}`;
@@ -487,6 +516,7 @@
       document.querySelector('[name="shift_date"]').value = new Date().toISOString().slice(0, 10);
       await loadCamMeta();
       await loadGuardAdmin();
+      await loadClientAdmin();
       await Promise.all([loadDash(), loadMissedAlerts(), loadShifts(), loadAssign(), loadSites(), loadPatrolSummary()]);
     }
 
@@ -544,7 +574,9 @@
       e.preventDefault();
       const fd = new FormData(e.target);
       await api("/api/sites", { method: "POST", body: JSON.stringify(Object.fromEntries(fd)) });
-      e.target.reset(); loadSites();
+      e.target.reset();
+      await loadSites();
+      await loadClientAdmin();
     };
     document.getElementById("setForm").onsubmit = async (e) => {
       e.preventDefault();
@@ -561,6 +593,17 @@
       e.target.reset();
       await loadGuardAdmin();
       alert("Oficial creado. Ahora agregue sitio y programación de turno.");
+    };
+    document.getElementById("clientForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const body = Object.fromEntries(fd);
+      body.role = "client";
+      body.client_site_id = Number(body.client_site_id);
+      await api("/api/users", { method: "POST", body: JSON.stringify(body) });
+      e.target.reset();
+      await loadClientAdmin();
+      alert("Cliente creado. Entra en /cliente con ese usuario y clave.");
     };
 
     init().catch(() => { setToken(""); location.href = "/login"; });

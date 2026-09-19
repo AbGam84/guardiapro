@@ -1,66 +1,69 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Excalibu Sentinel — acceso</title>
-  <link rel="icon" href="/static/favicon.png" type="image/png" />
-  <link rel="stylesheet" href="/static/css/app.css?v=4" />
-  <link rel="manifest" href="/manifest.json" />
-</head>
-<body>
-  <div class="login-wrap panel">
-    <div class="brand-head">
-      <img src="/static/excalibu-mark.png?v=4" alt="" class="brand-logo" width="104" height="104" />
-      <div>
-        <h1>Excalibu <span class="brand-accent">Sentinel</span></h1>
-      </div>
-    </div>
-    <blockquote class="brand-slogan brand-slogan-compact">
-      <span class="slogan-line">Su <span class="word-guardia">guardia</span> cuida el <span class="word-sitio">sitio</span>.</span>
-      <span class="slogan-line slogan-line-accent"><span class="word-excalibu">Excalibu</span> cuida al guardia.</span>
-    </blockquote>
-    <p class="brand-tagline">Bitácora · QR · GPS · Cámaras · Costa Rica</p>
-    <form id="loginForm" class="form-grid">
-      <label>Código empresa (opcional)<input name="company_code" placeholder="excalibu-telecom" autocomplete="organization" /></label>
-      <label>Usuario<input name="username" required autocomplete="username" /></label>
-      <label>Clave<input name="password" type="password" required autocomplete="current-password" /></label>
-      <button class="btn btn-primary btn-block" type="submit">Entrar</button>
-    </form>
-    <p id="err" class="error hidden"></p>
-    <p class="muted" style="margin-top:16px;font-size:.78rem">
-      Acceso operativo · Excalibu Telecom CR<br>
-      Soporte multi-empresa: <a href="/vendor">/vendor</a>
-    </p>
-  </div>
-  <script src="/static/js/api.js"></script>
-  <script>
-    document.getElementById("loginForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const err = document.getElementById("err");
-      err.classList.add("hidden");
-      const fd = new FormData(e.target);
-      try {
-        const data = await api("/api/auth/login", {
-          method: "POST",
-          body: JSON.stringify({
-            username: fd.get("username"),
-            password: fd.get("password"),
-            company_code: fd.get("company_code") || "",
-          }),
-        });
-        setToken(data.access_token);
-        const role = data.user.role;
-        const next = new URLSearchParams(location.search).get("next");
-        if (next) location.href = next;
-        else if (role === "guard") location.href = "/guardia";
-        else if (role === "client") location.href = "/cliente";
-        else location.href = "/admin";
-      } catch (ex) {
-        err.textContent = ex.message;
-        err.classList.remove("hidden");
-      }
-    });
-  </script>
-</body>
-</html>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Excalibu Sentinel — acceso</title>
+  <link rel="icon" href="/static/favicon.png" type="image/png" />
+  <link rel="stylesheet" href="/static/css/app.css?v=5" />
+  <link rel="manifest" href="/manifest.json" />
+</head>
+<body>
+  <div class="login-wrap panel">
+    <div class="brand-head">
+      <img src="/static/excalibu-mark.png?v=4" alt="" class="brand-logo" width="104" height="104" />
+      <div>
+        <h1>Excalibu <span class="brand-accent">Sentinel</span></h1>
+      </div>
+    </div>
+    <blockquote class="brand-slogan brand-slogan-compact">
+      <span class="slogan-line">Su <span class="word-guardia">guardia</span> cuida el <span class="word-sitio">sitio</span>.</span>
+      <span class="slogan-line slogan-line-accent"><span class="word-excalibu">Excalibu</span> cuida al guardia.</span>
+    </blockquote>
+    <p class="brand-tagline">Bitácora · QR · GPS · Cámaras · Costa Rica</p>
+    <form id="loginForm" class="form-grid">
+      <label>Usuario<input name="username" required autocomplete="username" /></label>
+      <label>Clave<input name="password" type="password" required autocomplete="current-password" /></label>
+      <details style="font-size:.85rem;color:var(--muted)">
+        <summary style="cursor:pointer;color:var(--teal)">Código de empresa (solo si se lo dieron)</summary>
+        <label style="margin-top:8px">Código<input name="company_code" placeholder="excalibu-telecom" autocomplete="off" /></label>
+      </details>
+      <button class="btn btn-primary btn-block" type="submit">Entrar</button>
+    </form>
+    <p id="err" class="error hidden"></p>
+    <p class="muted" style="margin-top:16px;font-size:.78rem">
+      Admin y guardias: mismo login · Portal cliente: <a href="/login?next=/cliente">/cliente</a><br>
+      El acceso cliente lo crea administración en Ajustes.
+    </p>
+  </div>
+  <script src="/static/js/api.js"></script>
+  <script>
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const err = document.getElementById("err");
+      err.classList.add("hidden");
+      const fd = new FormData(e.target);
+      try {
+        const data = await api("/api/auth/login", {
+          method: "POST",
+          body: JSON.stringify({
+            username: fd.get("username"),
+            password: fd.get("password"),
+            company_code: fd.get("company_code") || "",
+          }),
+        });
+        setToken(data.access_token);
+        const role = data.user.role;
+        const next = new URLSearchParams(location.search).get("next");
+        if (next) location.href = next;
+        else if (role === "guard") location.href = "/guardia";
+        else if (role === "client") location.href = "/cliente";
+        else location.href = "/admin";
+      } catch (ex) {
+        err.textContent = ex.message;
+        err.classList.remove("hidden");
+      }
+    });
+  </script>
+</body>
+</html>

@@ -84,7 +84,7 @@ def health():
         "slogan": SLOGAN,
         "tagline": TAGLINE,
         "production": IS_PRODUCTION,
-        "build": "20260922",
+        "build": "20260923",
     }
 
 
@@ -123,8 +123,12 @@ def login(payload: LoginIn, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Usuario o clave incorrectos")
     company = get_company(db, user)
     code = (payload.company_code or "").strip().lower()
-    if code and company.code != code:
-        raise HTTPException(status_code=401, detail="Código de empresa incorrecto")
+    legacy_codes = {"demo-seguridad", "demo", "guardiapro", "excalibu", "excalibu-telecom"}
+    if code and company.code != code and code not in legacy_codes:
+        raise HTTPException(
+            status_code=401,
+            detail=f"Código de empresa incorrecto. Use «{company.code}» o deje el campo vacío.",
+        )
     token = create_access_token(
         {"sub": user.username, "role": user.role, "company_id": user.company_id, "company_code": company.code}
     )
@@ -1127,6 +1131,20 @@ def list_guards(
         .all()
     )
     return {"guards": [user_dict(u) for u in rows]}
+
+
+@router.get("/api/users")
+def list_users(
+    user: Annotated[User, Depends(require_roles("admin"))],
+    db: Session = Depends(get_db),
+):
+    rows = (
+        db.query(User)
+        .filter(User.company_id == user.company_id, User.active.is_(True))
+        .order_by(User.role.asc(), User.name.asc())
+        .all()
+    )
+    return {"users": [user_dict(u) for u in rows]}
 
 
 @router.post("/api/users")
