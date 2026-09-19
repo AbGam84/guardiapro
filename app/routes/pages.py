@@ -61,9 +61,14 @@ def page_client():
     return _html("cliente.html")
 
 
+@router.get("/comercial")
+def page_comercial():
+    return _html("comercial.html")
+
+
 @router.get("/vendor")
-def page_vendor():
-    return _html("vendor.html")
+def page_vendor_legacy():
+    return RedirectResponse("/comercial", status_code=307)
 
 
 @router.get("/demo")

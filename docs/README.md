@@ -4,13 +4,15 @@
 
 Doble clic en **`Iniciar.bat`** (raíz del proyecto).
 
-| Rol | Usuario | Clave |
-|-----|---------|-------|
-| Admin | admin | Admin2026! |
-| Oficial | *(crear en Admin → Ajustes)* | — |
-| Vendor | vendor | GuardiaVendor2026 |
+| Rol | Usuario | Clave | Panel |
+|-----|---------|-------|-------|
+| Comercial (Excalibu) | vendor | GuardiaVendor2026 | `/comercial` |
+| Admin cliente | admin | Admin2026! | `/admin` |
+| Oficial | código 6 dígitos | — | `/oficial` |
 
-URLs locales: http://127.0.0.1:8097/login · `/guardia` · `/admin` · `/cliente`
+**Panel comercial** (`/comercial`): vender licencias — crear empresas, administradores del cliente y oficiales con código celular. No es el admin operativo.
+
+URLs locales: http://127.0.0.1:8097/login · `/comercial` · `/admin` · `/oficial` · `/cliente`
 
 ## Estructura del código
 

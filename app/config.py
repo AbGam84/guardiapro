@@ -29,7 +29,7 @@ ADMIN_NAME = _env("GUARDIA_ADMIN_NAME", "Administrador")
 
 VENDOR_USERNAME = _env("GUARDIA_VENDOR_USER", "vendor")
 VENDOR_PASSWORD = _env("GUARDIA_VENDOR_PASSWORD", "GuardiaVendor2026")
-VENDOR_NAME = _env("GUARDIA_VENDOR_NAME", "Excalibu Vendor")
+VENDOR_NAME = _env("GUARDIA_VENDOR_NAME", "Excalibu Telecom Comercial")
 
 HOST = _env("HOST", "0.0.0.0")
 PORT = int(_env("PORT", "8097"))

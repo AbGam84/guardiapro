@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Excalibu Sentinel — panel comercial</title>
+  <link rel="icon" href="/static/favicon.png" type="image/png" />
+  <link rel="stylesheet" href="/static/css/app.css?v=5" />
+  <style>
+    .comercial-badge { display:inline-block;padding:4px 10px;border-radius:999px;background:rgba(255,176,32,.15);border:1px solid rgba(255,176,32,.35);color:var(--gold);font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px }
+    .code-box { margin:10px 0;padding:14px;background:#0d1420;border-radius:12px;border:1px solid var(--border);text-align:center }
+    .code-box code { font-size:1.75rem;color:var(--gold);letter-spacing:.2em }
+    .cred-box { background:#0d1420;border:1px dashed var(--border);border-radius:12px;padding:14px;font-size:.85rem;margin-top:12px }
+  </style>
+</head>
+<body>
+  <div id="loginView" class="login-wrap panel">
+    <div class="comercial-badge">Panel comercial · no es admin operativo</div>
+    <h1>Excalibu <span class="brand-accent">Comercial</span></h1>
+    <p class="muted">Vender licencias · crear empresas · administradores · códigos de oficial</p>
+    <form id="vLogin" class="form-grid">
+      <label>Usuario comercial<input name="username" required autocomplete="username" /></label>
+      <label>Clave<input name="password" type="password" required autocomplete="current-password" /></label>
+      <button class="btn btn-primary btn-block" type="submit">Entrar al panel comercial</button>
+    </form>
+    <p id="vErr" class="error hidden"></p>
+    <p class="muted" style="margin-top:16px;font-size:.78rem;text-align:center">
+      Operación diaria del cliente → <a href="/admin">/admin</a><br>
+      Celular del guardia → <a href="/oficial">/oficial</a>
+    </p>
+  </div>
+
+  <div id="appView" class="shell hidden">
+    <div class="topbar">
+      <div>
+        <div class="comercial-badge">Excalibu Telecom CR · ventas</div>
+        <h1>Panel comercial</h1>
+        <p class="muted" id="vStats">—</p>
+      </div>
+      <button class="btn btn-ghost" id="vLogout" type="button">Salir</button>
+    </div>
+
+    <nav class="tabs-nav">
+      <div class="tab-section">
+        <div class="tabs">
+          <button class="tab active" data-tab="venta">Nueva venta</button>
+          <button class="tab" data-tab="empresa">Gestionar empresa</button>
+        </div>
+      </div>
+    </nav>
+
+    <div id="tab-venta" class="tab-panel">
+      <div class="panel">
+        <h2>Vender licencia — nueva empresa de seguridad</h2>
+        <p class="muted">Crea la empresa y el primer administrador. El cliente opera en <strong>/admin</strong> (no aquí).</p>
+        <form id="coForm" class="form-grid two-col">
+          <label class="full">Nombre empresa cliente<input name="name" required placeholder="Seguridad El Roble S.A." /></label>
+          <label>Código (opcional)<input name="code" placeholder="el-roble" /></label>
+          <label>WhatsApp alertas<input name="alert_whatsapp" placeholder="+506 6370-6546" /></label>
+          <label>Nombre administrador<input name="admin_name" value="Administrador" /></label>
+          <label>Usuario admin<input name="admin_username" value="admin" required /></label>
+          <label>Clave admin<input name="admin_password" type="password" minlength="6" required placeholder="Mínimo 6 caracteres" /></label>
+          <div class="full"><button class="btn btn-primary" type="submit">Crear empresa + admin</button></div>
+        </form>
+        <div id="coResult" class="cred-box hidden"></div>
+      </div>
+      <div class="panel" style="margin-top:16px">
+        <h2>Empresas vendidas</h2>
+        <div id="coList"></div>
+      </div>
+    </div>
+
+    <div id="tab-empresa" class="tab-panel hidden">
+      <div class="panel">
+        <h2>Empresa del cliente</h2>
+        <label>Seleccionar empresa<select id="companyPick"></select></label>
+        <p class="muted" id="companyHint" style="margin-top:8px">—</p>
+      </div>
+
+      <div class="panel" style="margin-top:16px">
+        <h2>Administradores del cliente</h2>
+        <p class="muted">Usuarios que entran a <strong>/admin</strong> para operar turnos, sitios y reportes.</p>
+        <div id="adminList"></div>
+        <hr style="border-color:var(--border);margin:16px 0" />
+        <h3>Crear administrador</h3>
+        <form id="adminForm" class="form-grid two-col">
+          <label>Nombre<input name="name" required placeholder="Gerente operaciones" /></label>
+          <label>Usuario login<input name="username" required autocomplete="off" /></label>
+          <label>Clave<input name="password" type="password" minlength="6" required /></label>
+          <label>Rol
+            <select name="role">
+              <option value="admin">Administrador</option>
+              <option value="supervisor">Supervisor</option>
+            </select>
+          </label>
+          <div class="full"><button class="btn btn-primary" type="submit">Crear administrador</button></div>
+        </form>
+        <div id="adminResult" class="cred-box hidden"></div>
+      </div>
+
+      <div class="panel" style="margin-top:16px">
+        <h2>Oficiales — código por celular</h2>
+        <p class="muted">Cada guardia recibe un código de 6 dígitos. Entra solo en <strong>/oficial</strong> — celular independiente, informe real de su recorrido.</p>
+        <div id="guardList"></div>
+        <hr style="border-color:var(--border);margin:16px 0" />
+        <h3>Nuevo oficial + código</h3>
+        <form id="guardForm" class="form-grid two-col">
+          <label>Nombre completo<input name="name" required /></label>
+          <label>Placa / badge<input name="badge" placeholder="OF-001" /></label>
+          <label>Usuario (respaldo)<input name="username" required autocomplete="off" /></label>
+          <label>Clave (respaldo)<input name="password" type="password" minlength="6" required /></label>
+          <label>Teléfono<input name="phone" placeholder="+506..." /></label>
+          <div class="full"><button class="btn btn-primary" type="submit">Crear oficial y generar código</button></div>
+        </form>
+        <div id="guardResult" class="cred-box hidden"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/api.js"></script>
+  <script>
+    const VTOKEN = "excalibu_comercial_token";
+    const vTok = () => localStorage.getItem(VTOKEN) || "";
+    const setVTok = (t) => t ? localStorage.setItem(VTOKEN, t) : localStorage.removeItem(VTOKEN);
+
+    async function vapi(path, opts = {}) {
+      const h = { ...(opts.headers || {}), "Content-Type": "application/json" };
+      if (vTok()) h.Authorization = "Bearer " + vTok();
+      const r = await fetch(path, { ...opts, headers: h });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.detail || "Error " + r.status);
+      return data;
+    }
+
+    let companies = [];
+    let selectedCompanyId = null;
+
+    document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+      document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+      document.querySelectorAll(".tab-panel").forEach(x => x.classList.add("hidden"));
+      t.classList.add("active");
+      document.getElementById("tab-" + t.dataset.tab).classList.remove("hidden");
+      if (t.dataset.tab === "empresa" && selectedCompanyId) loadCompanyDetail(selectedCompanyId);
+    });
+
+    document.getElementById("vLogin").onsubmit = async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      try {
+        const d = await vapi("/api/vendor/login", {
+          method: "POST",
+          body: JSON.stringify({ username: fd.get("username"), password: fd.get("password") }),
+        });
+        setVTok(d.access_token);
+        showApp();
+      } catch (ex) {
+        const el = document.getElementById("vErr");
+        el.textContent = ex.message;
+        el.classList.remove("hidden");
+      }
+    };
+
+    function renderCompaniesList() {
+      document.getElementById("coList").innerHTML = companies.map(c =>
+        `<div style="padding:10px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+          <div><strong>${c.name}</strong><br><span class="muted">código: ${c.code}</span></div>
+          <button class="btn btn-ghost" type="button" data-pick="${c.id}">Gestionar</button>
+        </div>`
+      ).join("") || "<p class='muted'>Sin empresas — cree la primera arriba.</p>";
+      document.getElementById("coList").querySelectorAll("[data-pick]").forEach(btn => {
+        btn.onclick = () => {
+          selectedCompanyId = Number(btn.dataset.pick);
+          document.getElementById("companyPick").value = String(selectedCompanyId);
+          document.querySelector('[data-tab=empresa]').click();
+        };
+      });
+      const opts = companies.map(c => `<option value="${c.id}">${c.name} (${c.code})</option>`).join("");
+      document.getElementById("companyPick").innerHTML =
+        opts || '<option value="">— Sin empresas —</option>';
+      if (!selectedCompanyId && companies[0]) selectedCompanyId = companies[0].id;
+      if (selectedCompanyId) document.getElementById("companyPick").value = String(selectedCompanyId);
+    }
+
+    async function loadCompanyDetail(id) {
+      if (!id) return;
+      const d = await vapi(`/api/vendor/companies/${id}`);
+      selectedCompanyId = id;
+      document.getElementById("companyHint").textContent =
+        `${d.company.name} · ${d.sites_count} sitios · ${d.open_shifts} turnos abiertos · código ${d.company.code}`;
+
+      document.getElementById("adminList").innerHTML = [...(d.admins || []), ...(d.supervisors || [])].map(u =>
+        `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
+          <strong>${u.name}</strong> · <code>${u.username}</code> · <span class="badge">${u.role}</span>
+        </div>`
+      ).join("") || "<p class='muted'>Sin administradores extra. Cree uno abajo.</p>";
+
+      const origin = location.origin;
+      document.getElementById("guardList").innerHTML = (d.guards || []).map(u => {
+        const link = origin + (u.field_login_path || `/oficial?code=${u.field_code}`);
+        return `<div style="padding:14px 0;border-bottom:1px solid var(--border)">
+          <strong>${u.name}</strong> ${u.badge ? `<span class="badge">${u.badge}</span>` : ""}
+          <div class="code-box"><span class="muted" style="font-size:.72rem">CÓDIGO CELULAR</span><br><code>${u.field_code || "—"}</code></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <a class="btn btn-primary" href="${link}" target="_blank">Probar /oficial</a>
+            <button class="btn btn-ghost" type="button" data-copy="${link}">Copiar link</button>
+            <button class="btn btn-ghost" type="button" data-regen="${u.id}">Nuevo código</button>
+          </div>
+        </div>`;
+      }).join("") || "<p class='muted'>Sin oficiales. Cree uno abajo con código automático.</p>";
+
+      document.getElementById("guardList").querySelectorAll("[data-copy]").forEach(btn => {
+        btn.onclick = () => { navigator.clipboard.writeText(btn.dataset.copy); btn.textContent = "Copiado"; };
+      });
+      document.getElementById("guardList").querySelectorAll("[data-regen]").forEach(btn => {
+        btn.onclick = async () => {
+          if (!confirm("¿Nuevo código? El anterior deja de funcionar.")) return;
+          await vapi(`/api/vendor/guards/${btn.dataset.regen}/field-code`, { method: "POST" });
+          loadCompanyDetail(selectedCompanyId);
+        };
+      });
+    }
+
+    async function showApp() {
+      document.getElementById("loginView").classList.add("hidden");
+      document.getElementById("appView").classList.remove("hidden");
+      const ov = await vapi("/api/vendor/overview");
+      companies = ov.companies || [];
+      document.getElementById("vStats").textContent =
+        `${ov.companies_count} empresas · ${ov.admins_count} admins · ${ov.guards_count} oficiales · ${ov.open_shifts} turnos abiertos`;
+      renderCompaniesList();
+      if (selectedCompanyId) await loadCompanyDetail(selectedCompanyId);
+    }
+
+    document.getElementById("companyPick").onchange = (e) => {
+      selectedCompanyId = Number(e.target.value) || null;
+      if (selectedCompanyId) loadCompanyDetail(selectedCompanyId);
+    };
+
+    document.getElementById("coForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const body = Object.fromEntries(fd.entries());
+      const d = await vapi("/api/vendor/companies", { method: "POST", body: JSON.stringify(body) });
+      const c = d.credentials || {};
+      const box = document.getElementById("coResult");
+      box.classList.remove("hidden");
+      box.innerHTML = `<strong>${d.message}</strong><br><br>
+        Entrega al cliente:<br>
+        · Panel operativo: <code>${origin}/admin</code><br>
+        · Código empresa: <code>${c.company_code}</code><br>
+        · Usuario admin: <code>${c.username}</code><br>
+        · Clave: la que acaba de definir`;
+      e.target.reset();
+      await showApp();
+    };
+
+    document.getElementById("adminForm").onsubmit = async (e) => {
+      e.preventDefault();
+      if (!selectedCompanyId) { alert("Seleccione empresa"); return; }
+      const fd = new FormData(e.target);
+      const body = Object.fromEntries(fd.entries());
+      const d = await vapi(`/api/vendor/companies/${selectedCompanyId}/users`, {
+        method: "POST", body: JSON.stringify(body),
+      });
+      const box = document.getElementById("adminResult");
+      box.classList.remove("hidden");
+      box.innerHTML = `<strong>${d.message}</strong><br>Login: /login · Usuario: <code>${d.credentials.username}</code> · Rol: ${body.role}`;
+      e.target.reset();
+      loadCompanyDetail(selectedCompanyId);
+    };
+
+    document.getElementById("guardForm").onsubmit = async (e) => {
+      e.preventDefault();
+      if (!selectedCompanyId) { alert("Seleccione empresa"); return; }
+      const fd = new FormData(e.target);
+      const body = Object.fromEntries(fd.entries());
+      body.role = "guard";
+      const d = await vapi(`/api/vendor/companies/${selectedCompanyId}/users`, {
+        method: "POST", body: JSON.stringify(body),
+      });
+      const u = d.user || {};
+      const link = location.origin + (u.field_login_path || "");
+      const box = document.getElementById("guardResult");
+      box.classList.remove("hidden");
+      box.innerHTML = `<strong>${d.message}</strong><br>
+        Código celular: <code style="font-size:1.2rem;color:var(--gold)">${u.field_code}</code><br>
+        Link: <code>${link}</code>`;
+      e.target.reset();
+      loadCompanyDetail(selectedCompanyId);
+    };
+
+    document.getElementById("vLogout").onclick = () => { setVTok(""); location.reload(); };
+    if (vTok()) showApp().catch(() => setVTok(""));
+  </script>
+</body>
+</html>
