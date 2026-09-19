@@ -1,12 +1,10 @@
-# Excalibu Sentinel — bitácora empresas de seguridad (Costa Rica)
-# https://dashboard.render.com/blueprints/new?repo=https://github.com/AbGam84/guardiapro
 services:
   - type: web
     name: excalibu-sentinel
     runtime: python
     plan: free
-    region: oregon
-    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    branch: main
+    buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
     envVars:
@@ -15,16 +13,14 @@ services:
       - key: ENVIRONMENT
         value: production
       - key: GUARDIA_DATA_DIR
-        value: /tmp/guardiapro-data
+        value: /tmp/excalibu-data
       - key: GUARDIA_SECRET_KEY
         generateValue: true
       - key: GUARDIA_ADMIN_USER
         value: admin
       - key: GUARDIA_ADMIN_PASSWORD
-        value: "Admin2026!"
+        value: Admin2026!
       - key: GUARDIA_VENDOR_USER
         value: vendor
       - key: GUARDIA_VENDOR_PASSWORD
-        value: "GuardiaVendor2026"
-      - key: PYTHON_VERSION
-        value: "3.12.8"
+        value: GuardiaVendor2026!
