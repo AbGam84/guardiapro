@@ -6,12 +6,11 @@
   <meta name="theme-color" content="#12c4a0" />
   <title>Excalibu Sentinel — demo en vivo</title>
   <link rel="icon" href="/static/favicon.png" type="image/png" />
-  <link rel="stylesheet" href="/static/css/app.css?v=3" />
+  <link rel="stylesheet" href="/static/css/app.css?v=4" />
   <style>
-    .hero { text-align: center; padding: 8px 0 16px; }
+    .hero { text-align: center; padding: 8px 0 8px; }
     .hero img { border-radius: 24px; box-shadow: 0 10px 28px rgba(0,0,0,.5); }
-    .hero h1 { font-size: 1.6rem; margin: 14px 0 6px; }
-    .slogan { color: var(--teal); font-weight: 700; font-size: .92rem; line-height: 1.35; margin: 10px 0 0; }
+    .hero h1 { font-size: 1.75rem; margin: 14px 0 4px; font-weight: 800; }
     .pill { display: inline-block; background: rgba(18,196,160,.15); color: var(--teal); border: 1px solid rgba(18,196,160,.35); padding: 6px 14px; border-radius: 999px; font-size: .78rem; font-weight: 600; }
     .feat, .diff { display: grid; gap: 10px; margin: 16px 0; }
     .feat div, .diff div { background: rgba(255,255,255,.03); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font-size: .88rem; }
@@ -30,9 +29,12 @@
       <div class="hero">
         <img src="/static/excalibu-mark.png?v=4" alt="Excalibu Sentinel" width="108" height="108" />
         <div class="pill">DEMO EN VIVO · COSTA RICA</div>
-        <h1>Excalibu <span style="color:var(--teal)">Sentinel</span></h1>
-        <p class="slogan">Su guardia cuida el sitio.<br>Excalibu cuida al guardia.</p>
-        <p class="muted" style="margin-top:8px;font-size:.82rem">Bitácora, QR, GPS, cámaras y reportes<br>para empresas de seguridad · Costa Rica</p>
+        <h1>Excalibu <span class="brand-accent">Sentinel</span></h1>
+        <blockquote class="brand-slogan">
+          <span class="slogan-line">Su <span class="word-guardia">guardia</span> cuida el <span class="word-sitio">sitio</span>.</span>
+          <span class="slogan-line slogan-line-accent"><span class="word-excalibu">Excalibu</span> cuida al guardia.</span>
+        </blockquote>
+        <p class="brand-tagline">Empresas de seguridad · Costa Rica</p>
       </div>
 
       <div class="feat">

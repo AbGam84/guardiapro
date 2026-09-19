@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap");
+
 :root {
   --bg: #0a0f18;
   --panel: #121a28;
@@ -5,10 +7,11 @@
   --text: #eef4ff;
   --muted: #8fa3bf;
   --gold: #ffb020;
+  --amber: #ff8c1a;
   --teal: #12c4a0;
   --danger: #ff5c5c;
   --ok: #3dd68c;
-  --display: "Segoe UI", system-ui, sans-serif;
+  --display: "Outfit", "Segoe UI", system-ui, sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -39,9 +42,56 @@ a { color: var(--teal); }
   flex-shrink: 0;
   background: #0a0f18;
 }
-.brand-accent { color: var(--teal); font-weight: 600; font-size: 1.1rem; }
-h1 { margin: 0 0 4px; font-size: 1.55rem; line-height: 1.2; }
+.brand-accent { color: var(--teal); font-weight: 700; font-size: 1.1rem; letter-spacing: .02em; }
+h1 { margin: 0 0 4px; font-size: 1.55rem; line-height: 1.2; font-weight: 800; letter-spacing: -.02em; }
 .muted { color: var(--muted); font-size: .9rem; }
+
+.brand-slogan {
+  margin: 14px 0 8px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(18,196,160,.12) 0%, rgba(255,176,32,.08) 100%);
+  border: 1px solid rgba(18,196,160,.28);
+  box-shadow: 0 8px 32px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.06);
+  text-align: center;
+}
+.brand-slogan .slogan-line {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: .01em;
+  color: #dce8f8;
+}
+.brand-slogan .slogan-line + .slogan-line { margin-top: 6px; }
+.brand-slogan .word-guardia { color: #a7f3d0; font-weight: 700; }
+.brand-slogan .word-sitio { color: var(--gold); font-weight: 800; }
+.brand-slogan .slogan-line-accent {
+  font-size: 1.12rem;
+  font-weight: 800;
+  background: linear-gradient(90deg, #ffd166 0%, #ffb020 35%, #12c4a0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  letter-spacing: .02em;
+  text-shadow: none;
+  filter: drop-shadow(0 0 18px rgba(18,196,160,.25));
+}
+.brand-slogan .word-excalibu {
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+.brand-slogan-compact { margin-top: 10px; padding: 12px 14px; }
+.brand-slogan-compact .slogan-line { font-size: .98rem; }
+.brand-slogan-compact .slogan-line-accent { font-size: 1.05rem; }
+.brand-tagline {
+  text-align: center;
+  font-size: .78rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 4px;
+}
 
 .form-grid { display: grid; gap: 12px; margin-top: 16px; }
 label { display: grid; gap: 6px; font-size: .85rem; color: var(--muted); }
