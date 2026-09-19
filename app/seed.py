@@ -24,7 +24,7 @@ def seed_if_empty(db: Session) -> None:
         code="demo-seguridad",
         name="Seguridad Pacífico Demo",
         phone="+506 6000-0000",
-        alert_whatsapp="+50660736546",
+        alert_whatsapp="+50663706546",
     )
     db.add(company)
     db.flush()

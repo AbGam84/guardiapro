@@ -131,7 +131,7 @@ def _draw_panfleto() -> Image.Image:
         draw.text((x1 + pw // 2, py + 46), sub, fill=TEXT, font=f["tiny"], anchor="ma")
 
     draw.line([(48, 920), (w - 48, 920)], fill=TEAL, width=2)
-    draw.text((48, 948), "WhatsApp 6073-6546", fill=TEXT, font=f["wa"])
+    draw.text((48, 948), "WhatsApp 6370-6546", fill=TEXT, font=f["wa"])
     draw.text((48, 1008), "Distribuidor · Instalador · Seguridad · Condominios · Bodegas", fill=MUTED, font=f["small"])
     draw.text((48, 1042), "Cotización sin compromiso", fill=MUTED, font=f["tiny"])
 
@@ -165,7 +165,7 @@ def _draw_post() -> Image.Image:
         y += 88
 
     draw.line([(48, 720), (w - 48, 720)], fill=TEAL, width=2)
-    draw.text((48, 750), "WhatsApp 6073-6546", fill=TEXT, font=f["wa"])
+    draw.text((48, 750), "WhatsApp 6370-6546", fill=TEXT, font=f["wa"])
     draw.text((48, 810), "Su guardia cuida el sitio. Excalibu cuida al guardia.", fill=MUTED, font=f["small"])
     img.paste(_qr(150), (w - 210, 740))
     return img
@@ -199,7 +199,7 @@ def _draw_story() -> Image.Image:
     draw.text((w // 2, y + 78), "Excalibu cuida al guardia.", fill=GOLD, font=f["h3"], anchor="ma")
 
     draw.line([(64, 1580), (w - 64, 1580)], fill=TEAL, width=3)
-    draw.text((w // 2, 1620), "WhatsApp 6073-6546", fill=TEXT, font=f["wa"], anchor="ma")
+    draw.text((w // 2, 1620), "WhatsApp 6370-6546", fill=TEXT, font=f["wa"], anchor="ma")
     qr = _qr(220)
     img.paste(qr, (w // 2 - 110, 1700))
     draw.text((w // 2, 1940 - 60), "Excalibu Telecom CR · Costa Rica", fill=MUTED, font=f["tiny"], anchor="ma")
@@ -236,7 +236,7 @@ Cómo enviar:
   2. Elija la imagen de esta carpeta
   3. Listo — sin URL
 
-Excalibu Telecom CR · WhatsApp 6073-6546
+Excalibu Telecom CR · WhatsApp 6370-6546
 """,
         encoding="utf-8",
     )

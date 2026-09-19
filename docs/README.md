@@ -47,4 +47,4 @@ Ver `PASO-A-PASO-RENDER.txt` en la raíz.
 - Textos listos: `docs/marketing/PUBLICIDAD-DISTRIBUIDOR.txt`
 - PNG: `Generar-Imagenes-Publicidad.bat`
 
-Empresa: **Excalibu Telecom CR** · WhatsApp +506 6073-6546
+Empresa: **Excalibu Telecom CR** · WhatsApp +506 6370-6546

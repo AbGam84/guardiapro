@@ -75,10 +75,10 @@
     );
     fetch("/api/product").then(r => r.json()).then(p => {
       document.getElementById("companyLine").textContent = (p.company_name || "Excalibu Telecom CR") + " · Costa Rica";
-      const wa = (p.whatsapp_url || "https://wa.me/50660736546");
+      const wa = (p.whatsapp_url || "https://wa.me/50663706546");
       document.getElementById("waBtn").href = wa + "?text=" + msg;
     }).catch(() => {
-      document.getElementById("waBtn").href = "https://wa.me/50660736546?text=" + msg;
+      document.getElementById("waBtn").href = "https://wa.me/50663706546?text=" + msg;
     });
   </script>
 </body>

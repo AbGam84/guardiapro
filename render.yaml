@@ -24,3 +24,7 @@ services:
         value: vendor
       - key: GUARDIA_VENDOR_PASSWORD
         value: GuardiaVendor2026!
+      - key: GUARDIA_SUPPORT
+        value: "+50663706546"
+      - key: GUARDIA_SUPPORT_DISPLAY
+        value: "+506 6370-6546"
