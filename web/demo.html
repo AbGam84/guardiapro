@@ -8,14 +8,16 @@
   <link rel="icon" href="/static/favicon.png" type="image/png" />
   <link rel="stylesheet" href="/static/css/app.css?v=3" />
   <style>
-    .hero { text-align: center; padding: 8px 0 20px; }
-    .hero img { width: 100px; height: 100px; border-radius: 22px; box-shadow: 0 10px 28px rgba(0,0,0,.5); }
+    .hero { text-align: center; padding: 8px 0 16px; }
+    .hero img { border-radius: 24px; box-shadow: 0 10px 28px rgba(0,0,0,.5); }
     .hero h1 { font-size: 1.6rem; margin: 14px 0 6px; }
-    .pill { display: inline-block; background: rgba(18,196,160,.15); color: var(--teal); border: 1px solid rgba(18,196,160,.35); padding: 6px 14px; border-radius: 999px; font-size: .78rem; font-weight: 600; letter-spacing: .04em; }
-    .feat { display: grid; gap: 10px; margin: 18px 0; }
-    .feat div { background: rgba(255,255,255,.03); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font-size: .9rem; }
-    .feat strong { color: var(--gold); display: block; margin-bottom: 4px; }
-    .cta { display: grid; gap: 10px; margin-top: 20px; }
+    .slogan { color: var(--teal); font-weight: 700; font-size: .92rem; line-height: 1.35; margin: 10px 0 0; }
+    .pill { display: inline-block; background: rgba(18,196,160,.15); color: var(--teal); border: 1px solid rgba(18,196,160,.35); padding: 6px 14px; border-radius: 999px; font-size: .78rem; font-weight: 600; }
+    .feat, .diff { display: grid; gap: 10px; margin: 16px 0; }
+    .feat div, .diff div { background: rgba(255,255,255,.03); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font-size: .88rem; }
+    .feat strong, .diff strong { color: var(--gold); display: block; margin-bottom: 4px; }
+    .diff em { color: var(--muted); font-style: normal; font-size: .8rem; }
+    .cta { display: grid; gap: 10px; margin-top: 18px; }
     .cta a { text-align: center; text-decoration: none; font-weight: 600; }
     .cred { background: #0d1520; border: 1px dashed var(--border); border-radius: 12px; padding: 14px; font-size: .85rem; margin-top: 16px; }
     .cred code { color: var(--gold); }
@@ -26,16 +28,26 @@
   <div class="shell" style="max-width:480px">
     <div class="panel">
       <div class="hero">
-        <img src="/static/excalibu-mark.png?v=4" alt="Excalibu Sentinel" width="108" height="108" style="border-radius:24px" />
+        <img src="/static/excalibu-mark.png?v=4" alt="Excalibu Sentinel" width="108" height="108" />
         <div class="pill">DEMO EN VIVO · COSTA RICA</div>
         <h1>Excalibu <span style="color:var(--teal)">Sentinel</span></h1>
-        <p class="muted" style="margin:0">La espada digital de su seguridad.<br>Bitácora, QR, GPS, cámaras y reportes.</p>
+        <p class="slogan">La seguridad dentro de la seguridad existe.<br>Somos nosotros.</p>
+        <p class="muted" style="margin-top:8px;font-size:.82rem">Usted vende seguridad física.<br>Nosotros aseguramos que se cumpla.</p>
       </div>
 
       <div class="feat">
-        <div><strong>📱 Oficial en campo</strong> Turno, escaneo QR en muros, recorrido GPS, fotos de incidente.</div>
-        <div><strong>🖥️ Centro de control</strong> Turnos en vivo, cámaras del sitio, reportes semanal y quincenal.</div>
-        <div><strong>📊 Para vender a su cliente</strong> PDF de rondas, marcas por guardia, distancia recorrida.</div>
+        <div><strong>📱 Oficial en campo</strong> Turno, QR en muros, distancia GPS, fotos de incidente.</div>
+        <div><strong>🖥️ Centro de control</strong> Cámaras WiFi/NVR/DVR, reportes semanal y quincenal.</div>
+        <div><strong>📊 Para su cliente final</strong> PDF con marcas, recorrido y hora — prueba de servicio.</div>
+      </div>
+
+      <h2 style="font-size:1rem;margin:18px 0 8px">Por qué somos diferentes</h2>
+      <div class="diff">
+        <div><strong>No somos otro rondín más</strong> Rondero360, Beech y Evidence venden rondas GPS. Nosotros somos la <em>capa de auditoría</em> sobre su operación.</div>
+        <div><strong>Cámaras + rondas juntas</strong> El oficial ve las cámaras del sitio (WiFi, NVR, DVR) en el mismo turno — sin app aparte.</div>
+        <div><strong>Distancia de recorrido</strong> No solo “pasó el QR”: metros/km recorridos por guardia, reporte administrativo.</div>
+        <div><strong>Sin hardware extra</strong> QR impreso en muro. Sin lectores NFC que se pierden o dañan.</div>
+        <div><strong>Demo en 2 minutos</strong> Link en celular. Sin contratos largos para probar.</div>
       </div>
 
       <div class="cta">
@@ -44,18 +56,17 @@
       </div>
 
       <div class="cred">
-        <strong style="color:var(--text)">Acceso demo (copie):</strong><br><br>
+        <strong style="color:var(--text)">Acceso demo:</strong><br><br>
         Guardia: <code>juan</code> / <code>Guardia2026!</code><br>
         Admin: <code>admin</code> / <code>Admin2026!</code>
       </div>
 
       <a class="btn btn-primary btn-block wa" id="waBtn" href="#">WhatsApp — quiero esto para mi empresa</a>
-      <p class="muted" style="text-align:center;margin-top:14px;font-size:.75rem">Excalibu Sentinel · Costa Rica</p>
     </div>
   </div>
   <script>
     const msg = encodeURIComponent(
-      "Hola, vi la demo de Excalibu Sentinel y quiero implementarlo en mi empresa de seguridad. ¿Me cotizan?"
+      "Hola, vi la demo de Excalibu Sentinel. Quiero la capa digital que audita mis rondas y cámaras. ¿Me cotizan?"
     );
     document.getElementById("waBtn").href = "https://wa.me/50663706546?text=" + msg;
   </script>

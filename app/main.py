@@ -22,6 +22,7 @@ from app.config import (
     PUBLIC_BASE_URL,
     SHOW_DEMO_HINTS,
     SUPPORT_WHATSAPP,
+    SLOGAN,
     TAGLINE,
     UPLOADS_DIR,
 )
@@ -136,6 +137,7 @@ def health():
     return {
         "ok": True,
         "product": PRODUCT_NAME,
+        "slogan": SLOGAN,
         "tagline": TAGLINE,
         "production": IS_PRODUCTION,
         "build": "20260919",
@@ -146,8 +148,17 @@ def health():
 def product():
     return {
         "name": PRODUCT_NAME,
+        "slogan": SLOGAN,
         "tagline": TAGLINE,
         "copyright": COPYRIGHT,
+        "differentiators": [
+            "Meta-capa: audita la operación de su propia empresa de seguridad",
+            "QR imprimible + distancia de recorrido GPS por guardia",
+            "Cámaras WiFi, NVR y DVR del sitio en la misma app del oficial",
+            "Reportes semanal y quincenal listos para el cliente final",
+            "Sin lectores NFC ni hardware extra — celular + QR en muro",
+            "Demo en vivo en 2 minutos, despliegue Costa Rica / LATAM",
+        ],
         "support": SUPPORT_WHATSAPP,
         "show_demo_hints": SHOW_DEMO_HINTS,
         "entry_types": [{"code": k, "label": v} for k, v in ENTRY_LABELS.items()],
