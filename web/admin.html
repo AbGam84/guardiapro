@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GuardiaPro — administración</title>
+  <link rel="stylesheet" href="/static/css/app.css?v=2" />
+</head>
+<body>
+  <div class="shell">
+    <div class="topbar">
+      <div><h1>Centro de control</h1><p class="muted" id="hello">—</p></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a class="btn btn-ghost" href="/guardia">Vista oficial</a>
+        <button class="btn btn-ghost" id="logout">Salir</button>
+      </div>
+    </div>
+
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-tab="dash">Resumen</button>
+      <button class="tab" data-tab="shifts">Bitácoras</button>
+      <button class="tab" data-tab="assign">Programación</button>
+      <button class="tab" data-tab="sites">Sitios</button>
+      <button class="tab" data-tab="settings">Ajustes</button>
+    </div>
+
+    <div id="tab-dash" class="tab-panel">
+      <div class="stats" id="stats"></div>
+      <div class="panel" style="margin-top:16px">
+        <h2>Turnos en curso</h2>
+        <div id="activeShifts"></div>
+      </div>
+      <div class="panel" style="margin-top:16px">
+        <h2>Incidentes recientes</h2>
+        <div id="incidents" class="log-list"></div>
+      </div>
+    </div>
+
+    <div id="tab-shifts" class="tab-panel hidden">
+      <div class="panel">
+        <h2>Historial de turnos</h2>
+        <table class="table" id="shiftTable"><thead><tr>
+          <th>Oficial</th><th>Sitio</th><th>Inicio</th><th>Fin</th><th>Estado</th><th></th>
+        </tr></thead><tbody></tbody></table>
+      </div>
+      <div id="detail" class="panel hidden" style="margin-top:16px">
+        <h2>Detalle bitácora</h2>
+        <p class="muted" id="detailTitle"></p>
+        <a class="btn btn-ghost" id="pdfLink" target="_blank">Imprimir / PDF</a>
+        <div class="log-list" id="detailLogs" style="margin-top:12px"></div>
+      </div>
+    </div>
+
+    <div id="tab-assign" class="tab-panel hidden">
+      <div class="panel">
+        <h2>Programación de hoy</h2>
+        <div id="assignList"></div>
+        <hr style="border-color:var(--border);margin:16px 0" />
+        <h3>Nueva asignación</h3>
+        <form id="assignForm" class="form-grid two-col">
+          <label>Sitio<select name="site_id" id="sitePick"></select></label>
+          <label>Oficial<select name="guard_id" id="guardPick"></select></label>
+          <label>Fecha<input name="shift_date" type="date" required /></label>
+          <label>Inicio<input name="start_time" value="06:00" /></label>
+          <label>Fin<input name="end_time" value="18:00" /></label>
+          <label class="full">Nota<textarea name="notes"></textarea></label>
+          <div class="full"><button class="btn btn-primary" type="submit">Guardar</button></div>
+        </form>
+      </div>
+    </div>
+
+    <div id="tab-sites" class="tab-panel hidden">
+      <div class="panel">
+        <h2>Sitios custodiados</h2>
+        <div id="siteList"></div>
+        <hr style="border-color:var(--border);margin:16px 0" />
+        <h3>Nuevo sitio</h3>
+        <form id="siteForm" class="form-grid">
+          <label>Nombre<input name="name" required /></label>
+          <label>Dirección<input name="address" /></label>
+          <label>Cliente<input name="client_name" /></label>
+          <button class="btn btn-primary" type="submit">Agregar sitio</button>
+        </form>
+      </div>
+    </div>
+
+    <div id="tab-settings" class="tab-panel hidden">
+      <div class="panel">
+        <h2>Empresa</h2>
+        <form id="setForm" class="form-grid">
+          <label>Nombre<input name="name" id="setName" /></label>
+          <label>Teléfono<input name="phone" id="setPhone" /></label>
+          <label>WhatsApp alertas incidentes<input name="alert_whatsapp" id="setWa" placeholder="+506..." /></label>
+          <button class="btn btn-primary" type="submit">Guardar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <script src="/static/js/api.js"></script>
+  <script>
+    document.getElementById("logout").onclick = () => { setToken(""); location.href = "/login"; };
+    document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+      document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+      document.querySelectorAll(".tab-panel").forEach(x => x.classList.add("hidden"));
+      t.classList.add("active");
+      document.getElementById("tab-" + t.dataset.tab).classList.remove("hidden");
+    });
+
+    async function loadDash() {
+      const d = await api("/api/dashboard");
+      document.getElementById("stats").innerHTML = `
+        <div class="stat"><span class="muted">Oficiales</span><b>${d.guards}</b></div>
+        <div class="stat"><span class="muted">Sitios</span><b>${d.sites}</b></div>
+        <div class="stat"><span class="muted">Turnos abiertos</span><b>${d.open_shifts}</b></div>
+        <div class="stat"><span class="muted">Reportes hoy</span><b>${d.logs_today}</b></div>`;
+      document.getElementById("activeShifts").innerHTML = (d.active_shifts || []).map(s =>
+        `<div style="padding:8px 0;border-bottom:1px solid var(--border)"><strong>${s.guard?.name}</strong> en ${s.site?.name} · ${fmt(s.started_at)}</div>`
+      ).join("") || "<p class='muted'>Ningún turno abierto</p>";
+      document.getElementById("incidents").innerHTML = (d.recent_incidents || []).map(l =>
+        `<div class="log-item incidente"><div class="log-meta">${fmt(l.created_at)} · ${l.severity_label}</div>${l.note}</div>`
+      ).join("") || "<p class='muted'>Sin incidentes</p>";
+    }
+
+    async function loadShifts() {
+      const data = await api("/api/shifts?limit=80");
+      const tbody = document.querySelector("#shiftTable tbody");
+      tbody.innerHTML = data.shifts.map(s => `<tr>
+        <td>${s.guard?.name}<br><span class="muted">${s.guard?.badge}</span></td>
+        <td>${s.site?.name}</td><td>${fmt(s.started_at)}</td><td>${fmt(s.ended_at)}</td>
+        <td><span class="badge ${s.status}">${s.status}</span></td>
+        <td><button class="btn btn-ghost" data-id="${s.id}">Ver</button></td>
+      </tr>`).join("");
+      tbody.querySelectorAll("button[data-id]").forEach(btn => {
+        btn.onclick = async () => {
+          const sh = (await api(`/api/shifts/${btn.dataset.id}`)).shift;
+          document.getElementById("detail").classList.remove("hidden");
+          document.getElementById("detailTitle").textContent = `${sh.guard?.name} · ${sh.site?.name}`;
+          document.getElementById("pdfLink").href = `/api/shifts/${sh.id}/report`;
+          document.getElementById("detailLogs").innerHTML = (sh.logs || []).map(l =>
+            `<div class="log-item ${l.entry_type}"><div class="log-meta">${fmt(l.created_at)} · ${l.entry_label}</div>${l.note}${l.photo_url ? `<br><img src="${l.photo_url}" style="max-width:240px;margin-top:6px;border-radius:8px">` : ""}</div>`
+          ).join("");
+        };
+      });
+    }
+
+    async function loadAssign() {
+      const d = await api("/api/assignments");
+      document.getElementById("assignList").innerHTML = (d.assignments || []).map(a =>
+        `<div style="padding:8px 0;border-bottom:1px solid var(--border)"><strong>${a.guard?.name}</strong> → ${a.site?.name} · ${a.start_time}–${a.end_time} <span class="badge">${a.status}</span></div>`
+      ).join("") || "<p class='muted'>Sin asignaciones hoy</p>";
+    }
+
+    async function loadSites() {
+      const d = await api("/api/sites");
+      document.getElementById("siteList").innerHTML = d.sites.map(s =>
+        `<div style="padding:8px 0;border-bottom:1px solid var(--border)"><strong>${s.name}</strong><br><span class="muted">${s.address} · ${s.client_name}</span></div>`
+      ).join("");
+      document.getElementById("sitePick").innerHTML = d.sites.map(s => `<option value="${s.id}">${s.name}</option>`).join("");
+    }
+
+    async function init() {
+      const me = await api("/api/auth/me");
+      document.getElementById("hello").textContent = `${me.user.name} · ${me.company.name}`;
+      document.getElementById("setName").value = me.company.name || "";
+      document.getElementById("setWa").value = me.company.alert_whatsapp || "";
+      document.querySelector('[name="shift_date"]').value = new Date().toISOString().slice(0, 10);
+      const g = await api("/api/guards");
+      document.getElementById("guardPick").innerHTML = g.guards.map(u => `<option value="${u.id}">${u.name}</option>`).join("");
+      await Promise.all([loadDash(), loadShifts(), loadAssign(), loadSites()]);
+    }
+
+    document.getElementById("assignForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      await api("/api/assignments", { method: "POST", body: JSON.stringify(Object.fromEntries(fd)) });
+      loadAssign();
+    };
+    document.getElementById("siteForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      await api("/api/sites", { method: "POST", body: JSON.stringify(Object.fromEntries(fd)) });
+      e.target.reset(); loadSites();
+    };
+    document.getElementById("setForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      await api("/api/company/settings", { method: "PATCH", body: JSON.stringify(Object.fromEntries(fd)) });
+      alert("Guardado");
+    };
+
+    init().catch(() => { setToken(""); location.href = "/login"; });
+  </script>
+</body>
+</html>

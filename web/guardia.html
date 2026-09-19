@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#12c4a0" />
+  <link rel="manifest" href="/manifest.json" />
+  <title>GuardiaPro — bitácora oficial</title>
+  <link rel="stylesheet" href="/static/css/app.css?v=2" />
+</head>
+<body>
+  <div class="shell">
+    <div class="topbar">
+      <div>
+        <h1>Bitácora</h1>
+        <p class="muted" id="hello">—</p>
+      </div>
+      <button class="btn btn-ghost" id="logout" type="button">Salir</button>
+    </div>
+
+    <div id="assignBox" class="panel hidden" style="margin-bottom:12px">
+      <h2 style="margin:0;font-size:1rem">Su programación hoy</h2>
+      <div id="assignList" class="muted"></div>
+    </div>
+
+    <div id="noShift" class="panel">
+      <h2 style="margin:0 0 8px;font-size:1.1rem">Iniciar turno</h2>
+      <form id="startForm" class="form-grid">
+        <label>Sitio<select name="site_id" id="siteSelect" required></select></label>
+        <label>Nota de inicio<textarea name="note" placeholder="Relevo, estado del sitio"></textarea></label>
+        <button class="btn btn-primary btn-block" type="submit">Iniciar turno</button>
+      </form>
+      <p id="startErr" class="error hidden"></p>
+    </div>
+
+    <div id="activeShift" class="hidden">
+      <div class="panel" style="margin-bottom:12px">
+        <span class="badge open">TURNO ABIERTO</span>
+        <strong id="siteName" style="display:block;margin-top:8px"></strong>
+        <span class="muted" id="shiftStarted"></span>
+      </div>
+
+      <div class="panel" style="margin-bottom:12px">
+        <h2 style="margin:0 0 8px;font-size:1rem">Puntos de ronda</h2>
+        <div id="checkpointList" class="chips"></div>
+      </div>
+
+      <div class="panel" style="margin-bottom:12px">
+        <h2 style="margin:0 0 8px;font-size:1rem">Reportar</h2>
+        <div class="chips" id="typeChips"></div>
+        <form id="logForm" class="form-grid">
+          <input type="hidden" name="entry_type" id="entryType" value="ronda" />
+          <label>Prioridad
+            <select name="severity" id="severity">
+              <option value="normal">Normal</option>
+              <option value="alta">Alta</option>
+              <option value="critica">Crítica</option>
+            </select>
+          </label>
+          <label>Detalle<textarea name="note" required placeholder="Sector, hora, acción"></textarea></label>
+          <button class="btn btn-ok btn-block" type="submit">Registrar en bitácora</button>
+        </form>
+        <p id="logErr" class="error hidden"></p>
+        <a id="waAlert" class="btn btn-primary btn-block hidden" style="margin-top:10px;text-align:center;text-decoration:none" target="_blank">Avisar supervisor WhatsApp</a>
+      </div>
+
+      <div class="panel" style="margin-bottom:12px">
+        <h2 style="margin:0 0 8px;font-size:1rem">Foto incidente</h2>
+        <form id="photoForm" class="form-grid">
+          <label>Foto<input name="photo" type="file" accept="image/*" capture="environment" required /></label>
+          <label>Detalle<textarea name="note" placeholder="Descripción del incidente"></textarea></label>
+          <button class="btn btn-ghost btn-block" type="submit">Subir foto + incidente</button>
+        </form>
+      </div>
+
+      <div class="panel" style="margin-bottom:12px">
+        <h2 style="margin:0 0 8px;font-size:1rem">Historial del turno</h2>
+        <div class="log-list" id="logList"></div>
+      </div>
+
+      <div class="panel">
+        <form id="endForm" class="form-grid">
+          <label>Nota de cierre<textarea name="note"></textarea></label>
+          <button class="btn btn-danger btn-block" type="submit">Finalizar turno</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <script src="/static/js/api.js"></script>
+  <script>
+    let shift = null;
+    let checkpoints = [];
+    const types = ["ronda", "checkpoint", "incidente", "novedad"];
+
+    document.getElementById("logout").onclick = () => { setToken(""); location.href = "/login"; };
+
+    function renderLogs(logs) {
+      const box = document.getElementById("logList");
+      if (!logs?.length) { box.innerHTML = '<p class="muted">Sin registros.</p>'; return; }
+      box.innerHTML = logs.map(l => `
+        <div class="log-item ${l.entry_type} ${l.severity === 'critica' ? 'critica' : ''}">
+          <div class="log-meta">${fmt(l.created_at)} · ${l.entry_label || l.entry_type} · ${l.severity_label || ''}</div>
+          <div>${(l.note || "").replace(/</g,"&lt;")}</div>
+          ${l.photo_url ? `<img src="${l.photo_url}" style="max-width:100%;margin-top:8px;border-radius:8px" />` : ""}
+        </div>`).join("");
+    }
+
+    async function loadCheckpoints(siteId) {
+      const d = await api(`/api/sites/${siteId}/checkpoints`);
+      checkpoints = d.checkpoints || [];
+      const box = document.getElementById("checkpointList");
+      if (!checkpoints.length) { box.innerHTML = '<span class="muted">Sin puntos configurados</span>'; return; }
+      box.innerHTML = checkpoints.map(cp =>
+        `<button type="button" class="chip" data-cp="${cp.id}">${cp.name}</button>`
+      ).join("");
+      box.querySelectorAll(".chip").forEach(btn => {
+        btn.onclick = async () => {
+          if (!shift) return;
+          await api(`/api/shifts/${shift.id}/log`, {
+            method: "POST",
+            body: JSON.stringify({ entry_type: "checkpoint", checkpoint_id: Number(btn.dataset.cp), note: "Checkpoint: " + btn.textContent }),
+          });
+          const u = await api(`/api/shifts/${shift.id}`);
+          showShift(u.shift);
+        };
+      });
+    }
+
+    function showShift(sh) {
+      shift = sh;
+      document.getElementById("noShift").classList.toggle("hidden", !!sh);
+      document.getElementById("activeShift").classList.toggle("hidden", !sh);
+      if (!sh) return;
+      document.getElementById("siteName").textContent = sh.site?.name || "";
+      document.getElementById("shiftStarted").textContent = "Desde " + fmt(sh.started_at);
+      renderLogs(sh.logs);
+      loadCheckpoints(sh.site?.id);
+    }
+
+    document.getElementById("typeChips").innerHTML = types.map((t,i) =>
+      `<button type="button" class="chip${i===0?' active':''}" data-type="${t}">${ENTRY_LABELS[t]}</button>`
+    ).join("");
+    document.getElementById("typeChips").querySelectorAll(".chip").forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll("#typeChips .chip").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById("entryType").value = btn.dataset.type;
+        document.getElementById("severity").value = btn.dataset.type === "incidente" ? "alta" : "normal";
+      };
+    });
+
+    async function init() {
+      const me = await api("/api/auth/me");
+      document.getElementById("hello").textContent = `${me.user.name} · ${me.user.badge} · ${me.company.name}`;
+      if (me.assignments_today?.length) {
+        document.getElementById("assignBox").classList.remove("hidden");
+        document.getElementById("assignList").innerHTML = me.assignments_today.map(a =>
+          `<div>📍 ${a.site?.name} · ${a.start_time}–${a.end_time}</div>`
+        ).join("");
+      }
+      const sites = await api("/api/sites");
+      document.getElementById("siteSelect").innerHTML = sites.sites.map(s => `<option value="${s.id}">${s.name}</option>`).join("");
+      const active = await api("/api/shifts/active");
+      showShift(active.shift);
+    }
+
+    document.getElementById("startForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      try {
+        const d = await api("/api/shifts/start", { method: "POST", body: JSON.stringify({ site_id: Number(fd.get("site_id")), note: fd.get("note") || "" }) });
+        showShift(d.shift);
+      } catch (ex) {
+        const el = document.getElementById("startErr");
+        el.textContent = ex.message; el.classList.remove("hidden");
+      }
+    };
+
+    document.getElementById("logForm").onsubmit = async (e) => {
+      e.preventDefault();
+      if (!shift) return;
+      const fd = new FormData(e.target);
+      let lat = null, lng = null;
+      try {
+        const pos = await new Promise((ok, bad) => navigator.geolocation.getCurrentPosition(ok, bad, { timeout: 4000 }));
+        lat = pos.coords.latitude; lng = pos.coords.longitude;
+      } catch (_) {}
+      try {
+        const d = await api(`/api/shifts/${shift.id}/log`, {
+          method: "POST",
+          body: JSON.stringify({
+            entry_type: fd.get("entry_type"),
+            severity: fd.get("severity"),
+            note: fd.get("note"),
+            lat, lng,
+          }),
+        });
+        const wa = document.getElementById("waAlert");
+        if (d.alert?.whatsapp_url) {
+          wa.href = d.alert.whatsapp_url;
+          wa.classList.remove("hidden");
+        } else wa.classList.add("hidden");
+        e.target.reset();
+        document.getElementById("entryType").value = "ronda";
+        showShift((await api(`/api/shifts/${shift.id}`)).shift);
+      } catch (ex) {
+        const el = document.getElementById("logErr");
+        el.textContent = ex.message; el.classList.remove("hidden");
+      }
+    };
+
+    document.getElementById("photoForm").onsubmit = async (e) => {
+      e.preventDefault();
+      if (!shift) return;
+      const fd = new FormData(e.target);
+      fd.append("entry_type", "incidente");
+      fd.append("severity", "alta");
+      const headers = { Authorization: "Bearer " + getToken() };
+      const r = await fetch(`/api/shifts/${shift.id}/log/photo`, { method: "POST", headers, body: fd });
+      const data = await r.json();
+      if (!r.ok) { alert(data.detail || "Error"); return; }
+      e.target.reset();
+      showShift((await api(`/api/shifts/${shift.id}`)).shift);
+    };
+
+    document.getElementById("endForm").onsubmit = async (e) => {
+      e.preventDefault();
+      if (!shift || !confirm("¿Cerrar turno?")) return;
+      const fd = new FormData(e.target);
+      await api(`/api/shifts/${shift.id}/close`, { method: "POST", body: JSON.stringify({ note: fd.get("note") || "" }) });
+      shift = null;
+      await init();
+    };
+
+    init().catch(() => { setToken(""); location.href = "/login"; });
+  </script>
+</body>
+</html>

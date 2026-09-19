@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GuardiaPro Vendor</title>
+  <link rel="stylesheet" href="/static/css/app.css?v=2" />
+</head>
+<body>
+  <div id="loginView" class="login-wrap panel">
+    <h1>GuardiaPro Vendor</h1>
+    <p class="muted">Panel dueño del software — crear empresas de seguridad</p>
+    <form id="vLogin" class="form-grid">
+      <label>Usuario<input name="username" required /></label>
+      <label>Clave<input name="password" type="password" required /></label>
+      <button class="btn btn-primary btn-block" type="submit">Entrar</button>
+    </form>
+    <p id="vErr" class="error hidden"></p>
+  </div>
+  <div id="appView" class="shell hidden">
+    <div class="topbar">
+      <div><h1>Vendor GuardiaPro</h1><p class="muted" id="vStats">—</p></div>
+      <button class="btn btn-ghost" id="vLogout">Salir</button>
+    </div>
+    <div class="panel">
+      <h2>Nueva empresa de seguridad</h2>
+      <form id="coForm" class="form-grid two-col">
+        <label class="full">Nombre empresa<input name="name" required placeholder="Seguridad El Roble" /></label>
+        <label>Código (opcional)<input name="code" placeholder="el-roble" /></label>
+        <label>WhatsApp alertas<input name="alert_whatsapp" placeholder="+506..." /></label>
+        <label>Admin nombre<input name="admin_name" value="Administrador" /></label>
+        <label>Admin usuario<input name="admin_username" value="admin" required /></label>
+        <label>Admin clave<input name="admin_password" type="password" minlength="6" required /></label>
+        <div class="full"><button class="btn btn-primary" type="submit">Crear empresa</button></div>
+      </form>
+      <div id="coResult" class="key-box hidden" style="margin-top:12px"></div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <h2>Empresas activas</h2>
+      <div id="coList"></div>
+    </div>
+  </div>
+  <script src="/static/js/api.js"></script>
+  <script>
+    const VTOKEN = "guardiapro_vendor_token";
+    const vTok = () => localStorage.getItem(VTOKEN) || "";
+    const setVTok = (t) => t ? localStorage.setItem(VTOKEN, t) : localStorage.removeItem(VTOKEN);
+    async function vapi(path, opts = {}) {
+      const h = { ...(opts.headers || {}), "Content-Type": "application/json" };
+      if (vTok()) h.Authorization = "Bearer " + vTok();
+      const r = await fetch(path, { ...opts, headers: h });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.detail || "Error");
+      return data;
+    }
+    document.getElementById("vLogin").onsubmit = async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      try {
+        const d = await vapi("/api/vendor/login", { method: "POST", body: JSON.stringify({ username: fd.get("username"), password: fd.get("password") }) });
+        setVTok(d.access_token);
+        showApp();
+      } catch (ex) {
+        const el = document.getElementById("vErr");
+        el.textContent = ex.message;
+        el.classList.remove("hidden");
+      }
+    };
+    async function showApp() {
+      document.getElementById("loginView").classList.add("hidden");
+      document.getElementById("appView").classList.remove("hidden");
+      const ov = await vapi("/api/vendor/overview");
+      document.getElementById("vStats").textContent = `${ov.companies_count} empresas · ${ov.open_shifts} turnos abiertos`;
+      document.getElementById("coList").innerHTML = (ov.companies || []).map(c =>
+        `<div style="padding:10px 0;border-bottom:1px solid var(--border)"><strong>${c.name}</strong> <span class="muted">código: ${c.code}</span></div>`
+      ).join("") || "<p class='muted'>Sin empresas</p>";
+    }
+    document.getElementById("coForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const body = Object.fromEntries(fd.entries());
+      const d = await vapi("/api/vendor/companies", { method: "POST", body: JSON.stringify(body) });
+      const box = document.getElementById("coResult");
+      box.classList.remove("hidden");
+      box.innerHTML = `<strong>${d.message}</strong><br>Login: /login · Código: <code>${d.company.code}</code><br>Admin: ${d.admin.username}`;
+      showApp();
+    };
+    document.getElementById("vLogout").onclick = () => { setVTok(""); location.reload(); };
+    if (vTok()) showApp().catch(() => setVTok(""));
+  </script>
+</body>
+</html>

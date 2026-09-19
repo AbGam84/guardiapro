@@ -1,0 +1,10 @@
+{
+  "name": "GuardiaPro Bitácora",
+  "short_name": "GuardiaPro",
+  "description": "Bitácora y rondas para oficiales de seguridad",
+  "start_url": "/guardia",
+  "display": "standalone",
+  "background_color": "#0a0f18",
+  "theme_color": "#12c4a0",
+  "lang": "es-CR"
+}
