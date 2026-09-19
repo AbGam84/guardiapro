@@ -148,41 +148,54 @@
 
     <div id="tab-cameras" class="tab-panel hidden">
       <div class="panel">
-        <h2>Cámaras de seguridad del sitio</h2>
-        <p class="muted">WiFi, NVR, DVR y canales. El oficial las ve en su turno para revisar el sitio.</p>
-        <label>Sitio<select id="camSite"></select></label>
-        <div id="camList" style="margin-top:16px"></div>
-        <hr style="border-color:var(--border);margin:16px 0" />
-        <h3>Agregar cámara o grabador</h3>
-        <form id="camForm" class="form-grid two-col">
-          <input type="hidden" name="site_id" id="camSiteId" />
-          <label>Tipo
-            <select name="camera_type" id="camType">
-              <option value="wifi">Cámara WiFi / IP</option>
-              <option value="nvr">Grabador NVR</option>
-              <option value="dvr">Grabador DVR</option>
-              <option value="nvr_channel">Canal en NVR</option>
-              <option value="dvr_channel">Canal en DVR</option>
-            </select>
-          </label>
-          <label>Marca<select name="brand" id="camBrand"></select></label>
-          <label>Nombre<input name="name" required placeholder="Entrada principal" /></label>
-          <label>Ubicación<input name="location" placeholder="Portón norte" /></label>
-          <label>IP / host<input name="ip_address" placeholder="192.168.1.100" /></label>
-          <label>Canal (NVR/DVR)<input name="channel" type="number" value="1" min="1" max="64" /></label>
-          <label>Puerto RTSP<input name="rtsp_port" type="number" value="554" /></label>
-          <label>Puerto web<input name="http_port" type="number" value="80" /></label>
-          <label>Usuario<input name="username" placeholder="admin" /></label>
-          <label>Clave<input name="password" type="password" placeholder="••••" /></label>
-          <label>URL video navegador<input name="stream_url" placeholder="http://IP/jpeg/stream (opcional)" /></label>
-          <label>URL panel web<input name="web_url" placeholder="http://IP (opcional)" /></label>
-          <label>URL RTSP manual<input name="rtsp_url" placeholder="rtsp://... (opcional)" /></label>
-          <label class="full">Grabador padre (solo canal)
-            <select name="parent_id" id="camParent"><option value="">— Ninguno —</option></select>
-          </label>
-          <label class="full">Notas<textarea name="notes" placeholder="App V360, XMEye, etc."></textarea></label>
-          <div class="full"><button class="btn btn-primary" type="submit">Guardar cámara</button></div>
-        </form>
+        <h2>Cámaras del sitio custodiado</h2>
+        <p class="muted">Registre las cámaras del <strong>cliente</strong> que su empresa de seguridad cuida (condominio, bodega, plaza). El oficial las ve en su turno.</p>
+        <div id="camNoSite" class="hidden" style="margin:12px 0;padding:14px;border-radius:12px;border:1px dashed var(--border);background:#0d1420">
+          <strong>Sin sitios registrados</strong>
+          <p class="muted" style="margin:8px 0 0">Primero cree el sitio en <button type="button" class="btn btn-ghost" style="padding:4px 8px;font-size:.85rem" onclick="document.querySelector('[data-tab=sites]').click()">Sitios</button> (nombre del lugar que custodian).</p>
+        </div>
+        <div id="camPanel">
+          <label>Sitio / puesto que custodia<select id="camSite"></select></label>
+          <div id="camSiteHint" class="muted" style="font-size:.85rem;margin-top:6px"></div>
+          <div id="camList" style="margin-top:16px"></div>
+          <hr style="border-color:var(--border);margin:16px 0" />
+          <h3>Agregar cámara de este sitio</h3>
+          <p class="muted" style="font-size:.85rem;margin:0 0 12px">Paso 1: elija sitio arriba · Paso 2: complete datos · Paso 3: el guardia las ve al iniciar turno.</p>
+          <form id="camForm" class="form-grid two-col">
+            <input type="hidden" name="site_id" id="camSiteId" />
+            <label>Tipo de equipo
+              <select name="camera_type" id="camType">
+                <option value="wifi">Cámara WiFi / IP</option>
+                <option value="nvr">Grabador NVR (registrar primero)</option>
+                <option value="dvr">Grabador DVR (registrar primero)</option>
+                <option value="nvr_channel">Canal en NVR</option>
+                <option value="dvr_channel">Canal en DVR</option>
+              </select>
+            </label>
+            <label>Marca<select name="brand" id="camBrand"></select></label>
+            <label>Nombre en el sitio<input name="name" required placeholder="Portón principal" /></label>
+            <label>Ubicación física<input name="location" placeholder="Entrada vehicular" /></label>
+            <label>IP o host<input name="ip_address" placeholder="192.168.1.100" /></label>
+            <label>Usuario cámara<input name="username" placeholder="admin" /></label>
+            <label>Clave cámara<input name="password" type="password" placeholder="Clave del equipo" /></label>
+            <details class="full" style="grid-column:1/-1;color:var(--muted);font-size:.9rem">
+              <summary style="cursor:pointer;color:var(--teal);font-weight:600">Opciones avanzadas (RTSP, canales)</summary>
+              <div class="form-grid two-col" style="margin-top:12px">
+                <label>Canal NVR/DVR<input name="channel" type="number" value="1" min="1" max="64" /></label>
+                <label>Puerto RTSP<input name="rtsp_port" type="number" value="554" /></label>
+                <label>Puerto web<input name="http_port" type="number" value="80" /></label>
+                <label>Grabador padre (solo canal)
+                  <select name="parent_id" id="camParent"><option value="">— Ninguno —</option></select>
+                </label>
+                <label class="full">URL video navegador<input name="stream_url" placeholder="http://IP/jpeg/stream (opcional)" /></label>
+                <label class="full">URL panel web<input name="web_url" placeholder="http://IP (opcional)" /></label>
+                <label class="full">URL RTSP manual<input name="rtsp_url" placeholder="rtsp://... (opcional)" /></label>
+                <label class="full">Notas<textarea name="notes" placeholder="App V360, XMEye, Tapo…"></textarea></label>
+              </div>
+            </details>
+            <div class="full"><button class="btn btn-primary" type="submit">Guardar cámara en este sitio</button></div>
+          </form>
+        </div>
       </div>
     </div>
 
@@ -348,19 +361,23 @@
 
     async function loadSites() {
       const d = await api("/api/sites");
-      document.getElementById("siteList").innerHTML = d.sites.map(s =>
-        `<div style="padding:8px 0;border-bottom:1px solid var(--border)"><strong>${s.name}</strong><br><span class="muted">${s.address} · ${s.client_name}</span></div>`
-      ).join("");
-      const opts = d.sites.map(s => `<option value="${s.id}">${s.name}</option>`).join("");
-      document.getElementById("sitePick").innerHTML = opts;
-      document.getElementById("qrSite").innerHTML = opts;
-      document.getElementById("camSite").innerHTML = opts;
-      if (d.sites[0]) {
-        document.getElementById("cpSiteId").value = d.sites[0].id;
-        document.getElementById("camSiteId").value = d.sites[0].id;
+      const sites = d.sites || [];
+      document.getElementById("siteList").innerHTML = sites.map(s =>
+        `<div style="padding:8px 0;border-bottom:1px solid var(--border)"><strong>${s.name}</strong><br><span class="muted">${s.address} · ${s.client_name || "Cliente"}</span></div>`
+      ).join("") || "<p class='muted'>Sin sitios. Agregue el lugar que custodia su empresa.</p>";
+      const opts = sites.map(s => `<option value="${s.id}">${s.name}${s.client_name ? " · " + s.client_name : ""}</option>`).join("");
+      document.getElementById("sitePick").innerHTML = opts || '<option value="">— Sin sitios —</option>';
+      document.getElementById("qrSite").innerHTML = opts || '<option value="">— Sin sitios —</option>';
+      document.getElementById("camSite").innerHTML = opts || '<option value="">— Sin sitios —</option>';
+      const noSite = sites.length === 0;
+      document.getElementById("camNoSite").classList.toggle("hidden", !noSite);
+      document.getElementById("camPanel").classList.toggle("hidden", noSite);
+      if (sites[0]) {
+        document.getElementById("cpSiteId").value = sites[0].id;
+        document.getElementById("camSiteId").value = sites[0].id;
         updateQrLinks();
-        loadCheckpointsAdmin(d.sites[0].id);
-        loadCamerasAdmin(d.sites[0].id);
+        updateCamSite();
+        loadCheckpointsAdmin(sites[0].id);
       }
     }
 
@@ -385,7 +402,7 @@
             <button class="btn btn-ghost" type="button" data-del="${c.id}">Quitar</button>
           </div>
         </div>`
-      ).join("") || "<p class='muted'>Sin cámaras. Agregue WiFi, NVR o DVR abajo.</p>";
+      ).join("") || "<p class='muted'>Este sitio no tiene cámaras. Use el formulario abajo para registrar las del cliente.</p>";
       document.getElementById("camList").querySelectorAll("[data-del]").forEach(btn => {
         btn.onclick = async () => {
           if (!confirm("¿Desactivar esta cámara?")) return;
@@ -396,9 +413,13 @@
     }
 
     function updateCamSite() {
-      const sid = document.getElementById("camSite").value;
+      const sel = document.getElementById("camSite");
+      const sid = sel.value;
       document.getElementById("camSiteId").value = sid;
-      loadCamerasAdmin(sid);
+      const hint = document.getElementById("camSiteHint");
+      const opt = sel.selectedOptions[0];
+      hint.textContent = opt && sid ? `Cámaras registradas para: ${opt.textContent}` : "";
+      if (sid) loadCamerasAdmin(sid);
     }
 
     function updateQrLinks() {
@@ -484,7 +505,8 @@
       await api("/api/cameras", { method: "POST", body: JSON.stringify(body) });
       e.target.reset();
       document.getElementById("camSiteId").value = document.getElementById("camSite").value;
-      loadCamerasAdmin(document.getElementById("camSite").value);
+      await loadCamerasAdmin(document.getElementById("camSite").value);
+      alert("Cámara guardada. El oficial la verá al iniciar turno en este sitio.");
     };
     document.getElementById("alertRefresh").onclick = loadMissedAlerts;
     document.getElementById("patrolRefresh").onclick = loadPatrolSummary;

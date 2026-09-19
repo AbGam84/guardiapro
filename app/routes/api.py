@@ -84,7 +84,7 @@ def health():
         "slogan": SLOGAN,
         "tagline": TAGLINE,
         "production": IS_PRODUCTION,
-        "build": "20260921",
+        "build": "20260922",
     }
 
 

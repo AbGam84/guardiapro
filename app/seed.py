@@ -48,6 +48,32 @@ def purge_operational_data(db: Session, company_id: int) -> None:
     ).delete(synchronize_session=False)
 
 
+def purge_demo_cameras(db: Session) -> int:
+    """Quita cámaras de prueba (demo1234, nombres demo, IPs de ejemplo)."""
+    company = db.query(Company).first()
+    if not company:
+        return 0
+    demo_ips = {"192.168.1.64", "192.168.1.50", "192.168.1.70"}
+    rows = (
+        db.query(SecurityCamera)
+        .filter(SecurityCamera.company_id == company.id, SecurityCamera.active.is_(True))
+        .all()
+    )
+    removed = 0
+    for cam in rows:
+        name_l = (cam.name or "").lower()
+        if (
+            cam.password == "demo1234"
+            or "demo" in name_l
+            or (cam.ip_address or "") in demo_ips
+        ):
+            db.delete(cam)
+            removed += 1
+    if removed:
+        db.commit()
+    return removed
+
+
 def migrate_demo_to_clean(db: Session) -> bool:
     """Una vez: borra contenido demo si la DB venía del seed anterior."""
     company = db.query(Company).first()

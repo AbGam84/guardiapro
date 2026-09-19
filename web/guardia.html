@@ -214,7 +214,7 @@
         const d = await api(`/api/sites/${siteId}/cameras`);
         const cams = d.cameras || [];
         if (!cams.length) {
-          box.innerHTML = '<p class="muted">Sin cámaras registradas para este sitio.</p>';
+          box.innerHTML = '<p class="muted">Sin cámaras en este sitio. Administración puede registrar las del cliente.</p>';
           return;
         }
         box.innerHTML = cams.map(c =>

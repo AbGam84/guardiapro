@@ -10,7 +10,7 @@ from app.database import Base, engine, get_db
 from app.migrate import ensure_schema
 from app.paths import WEB
 from app.routes import register_routes
-from app.seed import ensure_admin_access, migrate_demo_to_clean, seed_if_empty
+from app.seed import ensure_admin_access, migrate_demo_to_clean, purge_demo_cameras, seed_if_empty
 
 
 @asynccontextmanager
@@ -21,6 +21,7 @@ async def lifespan(app: FastAPI):
     try:
         seed_if_empty(db)
         migrate_demo_to_clean(db)
+        purge_demo_cameras(db)
         ensure_admin_access(db)
     finally:
         db.close()
