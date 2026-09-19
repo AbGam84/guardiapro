@@ -1053,6 +1053,11 @@ def root():
     return FileResponse(WEB / "login.html")
 
 
+@app.get("/demo")
+def page_demo():
+    return _html("demo.html")
+
+
 @app.get("/login")
 def page_login():
     return _html("login.html")
