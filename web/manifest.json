@@ -1,7 +1,7 @@
 {
   "name": "Excalibu Sentinel",
   "short_name": "Excalibu",
-  "description": "Bitácora, rondas QR y cámaras para empresas de seguridad",
+  "description": "Su guardia cuida el sitio. Excalibu cuida al guardia.",
   "start_url": "/guardia",
   "display": "standalone",
   "background_color": "#0a0f18",
