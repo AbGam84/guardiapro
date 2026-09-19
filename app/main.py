@@ -8,7 +8,7 @@ from urllib.parse import quote
 import aiofiles
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
@@ -124,6 +124,11 @@ def _whatsapp_link(phone: str, text: str) -> str:
     if not digits:
         return ""
     return f"https://wa.me/{digits}?text={quote(text)}"
+
+
+@app.get("/health")
+def health_short():
+    return RedirectResponse("/api/health", status_code=307)
 
 
 @app.get("/api/health")
@@ -1031,6 +1036,16 @@ def _html(name: str) -> HTMLResponse:
     if not path.exists():
         raise HTTPException(status_code=404)
     return HTMLResponse(path.read_text(encoding="utf-8"))
+
+
+@app.get("/web/{page:path}")
+def web_alias(page: str):
+    """Rutas /web/... usadas en otros productos → redirige."""
+    allowed = {"login", "guardia", "admin", "vendor", "login.html", "guardia.html", "admin.html"}
+    target = page.replace(".html", "")
+    if target in allowed or page in allowed:
+        return RedirectResponse(f"/{target.replace('.html', '')}", status_code=307)
+    return RedirectResponse("/login", status_code=307)
 
 
 @app.get("/")
