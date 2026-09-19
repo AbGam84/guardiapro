@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 
-from app.models import ClientSite, Company, LogEntry, PatrolCheckpoint, Shift, ShiftAssignment, User
+from app.camera_util import BRANDS, CAMERA_TYPES, build_rtsp_url, build_web_url
+from app.models import ClientSite, Company, LogEntry, PatrolCheckpoint, SecurityCamera, Shift, ShiftAssignment, User
 
 ENTRY_LABELS = {
     "inicio": "Inicio de turno",
@@ -117,6 +118,55 @@ def shift_dict(db: Session, sh: Shift, *, include_logs: bool = True) -> dict:
         "site": site_dict(site),
         "log_count": len(logs),
         "logs": [log_dict(x) for x in logs],
+    }
+
+
+def camera_dict(cam: SecurityCamera | None, *, show_secrets: bool = False) -> dict:
+    if not cam:
+        return {}
+    rtsp = build_rtsp_url(
+        brand=cam.brand,
+        camera_type=cam.camera_type,
+        ip=cam.ip_address,
+        port=cam.rtsp_port,
+        channel=cam.channel,
+        username=cam.username,
+        password=cam.password,
+        rtsp_override=cam.rtsp_url,
+    )
+    web = build_web_url(
+        brand=cam.brand,
+        ip=cam.ip_address,
+        http_port=cam.http_port,
+        username=cam.username,
+        web_override=cam.web_url,
+    )
+    return {
+        "id": cam.id,
+        "site_id": cam.site_id,
+        "parent_id": cam.parent_id,
+        "camera_type": cam.camera_type,
+        "camera_type_label": CAMERA_TYPES.get(cam.camera_type, cam.camera_type),
+        "name": cam.name,
+        "brand": cam.brand,
+        "brand_label": BRANDS.get(cam.brand, cam.brand),
+        "model_name": cam.model_name,
+        "location": cam.location,
+        "ip_address": cam.ip_address,
+        "rtsp_port": cam.rtsp_port,
+        "http_port": cam.http_port,
+        "channel": cam.channel,
+        "username": cam.username if show_secrets else (cam.username[:2] + "***" if cam.username else ""),
+        "has_password": bool(cam.password),
+        "password": cam.password if show_secrets else "",
+        "rtsp_url": rtsp if show_secrets else ("••••••••" if rtsp else ""),
+        "rtsp_url_hint": "Configurado" if rtsp else "",
+        "stream_url": cam.stream_url,
+        "web_url": web or cam.web_url,
+        "onvif_port": cam.onvif_port,
+        "notes": cam.notes,
+        "active": cam.active,
+        "view_path": f"/cameras/{cam.id}",
     }
 
 

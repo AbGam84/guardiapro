@@ -73,3 +73,45 @@ class CompanySettingsIn(BaseModel):
     name: str = ""
     phone: str = ""
     alert_whatsapp: str = ""
+
+
+class CameraIn(BaseModel):
+    site_id: int
+    camera_type: str = "wifi"
+    parent_id: int | None = None
+    name: str
+    brand: str = "other"
+    model_name: str = ""
+    location: str = ""
+    ip_address: str = ""
+    rtsp_port: int = 554
+    http_port: int = 80
+    channel: int = 1
+    username: str = ""
+    password: str = ""
+    rtsp_url: str = ""
+    stream_url: str = ""
+    web_url: str = ""
+    onvif_port: int = 80
+    notes: str = ""
+
+
+class CameraUpdateIn(BaseModel):
+    name: str | None = None
+    camera_type: str | None = None
+    parent_id: int | None = None
+    brand: str | None = None
+    model_name: str | None = None
+    location: str | None = None
+    ip_address: str | None = None
+    rtsp_port: int | None = None
+    http_port: int | None = None
+    channel: int | None = None
+    username: str | None = None
+    password: str | None = None
+    rtsp_url: str | None = None
+    stream_url: str | None = None
+    web_url: str | None = None
+    onvif_port: int | None = None
+    notes: str | None = None
+    active: bool | None = None

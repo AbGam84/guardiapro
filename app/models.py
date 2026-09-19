@@ -102,6 +102,35 @@ class Shift(Base):
     end_note: Mapped[str] = mapped_column(Text, default="")
 
 
+class SecurityCamera(Base):
+    """Cámaras del sitio: WiFi, NVR, DVR o canal en grabador."""
+
+    __tablename__ = "security_cameras"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    company_id: Mapped[int] = mapped_column(Integer, ForeignKey("companies.id"), index=True)
+    site_id: Mapped[int] = mapped_column(Integer, ForeignKey("client_sites.id"), index=True)
+    parent_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("security_cameras.id"), nullable=True)
+    camera_type: Mapped[str] = mapped_column(String(20), default="wifi", index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    brand: Mapped[str] = mapped_column(String(40), default="other")
+    model_name: Mapped[str] = mapped_column(String(80), default="")
+    location: Mapped[str] = mapped_column(String(160), default="")
+    ip_address: Mapped[str] = mapped_column(String(45), default="")
+    rtsp_port: Mapped[int] = mapped_column(Integer, default=554)
+    http_port: Mapped[int] = mapped_column(Integer, default=80)
+    channel: Mapped[int] = mapped_column(Integer, default=1)
+    username: Mapped[str] = mapped_column(String(80), default="")
+    password: Mapped[str] = mapped_column(String(120), default="")
+    rtsp_url: Mapped[str] = mapped_column(String(512), default="")
+    stream_url: Mapped[str] = mapped_column(String(512), default="")
+    web_url: Mapped[str] = mapped_column(String(512), default="")
+    onvif_port: Mapped[int] = mapped_column(Integer, default=80)
+    notes: Mapped[str] = mapped_column(Text, default="")
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
 class LogEntry(Base):
     __tablename__ = "log_entries"
 

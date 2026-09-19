@@ -54,6 +54,12 @@
       </div>
 
       <div class="panel" style="margin-bottom:12px">
+        <h2 style="margin:0 0 8px;font-size:1rem">Cámaras del sitio</h2>
+        <p class="muted" style="margin:0 0 8px;font-size:.85rem">WiFi, NVR y DVR instalados en el lugar que custodia.</p>
+        <div id="cameraList"></div>
+      </div>
+
+      <div class="panel" style="margin-bottom:12px">
         <h2 style="margin:0 0 8px;font-size:1rem">Puntos de ronda (toque manual)</h2>
         <div id="checkpointList" class="chips"></div>
       </div>
@@ -199,6 +205,28 @@
         </div>`).join("");
     }
 
+    async function loadCameras(siteId) {
+      const box = document.getElementById("cameraList");
+      try {
+        const d = await api(`/api/sites/${siteId}/cameras`);
+        const cams = d.cameras || [];
+        if (!cams.length) {
+          box.innerHTML = '<p class="muted">Sin cámaras registradas para este sitio.</p>';
+          return;
+        }
+        box.innerHTML = cams.map(c =>
+          `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+            <strong>${c.name}</strong> <span class="muted">${c.camera_type_label}</span><br>
+            <span class="muted" style="font-size:.85rem">${c.location || c.brand_label}</span><br>
+            <a class="btn btn-ghost" style="margin-top:6px;display:inline-block" href="/cameras/${c.id}">Ver cámara</a>
+            ${c.web_url ? `<a class="btn btn-ghost" style="margin-top:6px" href="${c.web_url}" target="_blank">Panel</a>` : ""}
+          </div>`
+        ).join("");
+      } catch (_) {
+        box.innerHTML = '<p class="muted">No se pudieron cargar cámaras.</p>';
+      }
+    }
+
     async function loadCheckpoints(siteId) {
       const d = await api(`/api/sites/${siteId}/checkpoints`);
       checkpoints = d.checkpoints || [];
@@ -239,6 +267,7 @@
       document.getElementById("shiftStarted").textContent = "Desde " + fmt(sh.started_at);
       renderLogs(sh.logs);
       loadCheckpoints(sh.site?.id);
+      loadCameras(sh.site?.id);
       loadPatrolStats();
     }
 

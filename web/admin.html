@@ -21,6 +21,7 @@
       <button class="tab" data-tab="shifts">Bitácoras</button>
       <button class="tab" data-tab="patrol">Recorridos</button>
       <button class="tab" data-tab="qr">QR rondas</button>
+      <button class="tab" data-tab="cameras">Cámaras</button>
       <button class="tab" data-tab="assign">Programación</button>
       <button class="tab" data-tab="sites">Sitios</button>
       <button class="tab" data-tab="settings">Ajustes</button>
@@ -94,6 +95,46 @@
       </div>
     </div>
 
+    <div id="tab-cameras" class="tab-panel hidden">
+      <div class="panel">
+        <h2>Cámaras de seguridad del sitio</h2>
+        <p class="muted">WiFi, NVR, DVR y canales. El oficial las ve en su turno para revisar el sitio.</p>
+        <label>Sitio<select id="camSite"></select></label>
+        <div id="camList" style="margin-top:16px"></div>
+        <hr style="border-color:var(--border);margin:16px 0" />
+        <h3>Agregar cámara o grabador</h3>
+        <form id="camForm" class="form-grid two-col">
+          <input type="hidden" name="site_id" id="camSiteId" />
+          <label>Tipo
+            <select name="camera_type" id="camType">
+              <option value="wifi">Cámara WiFi / IP</option>
+              <option value="nvr">Grabador NVR</option>
+              <option value="dvr">Grabador DVR</option>
+              <option value="nvr_channel">Canal en NVR</option>
+              <option value="dvr_channel">Canal en DVR</option>
+            </select>
+          </label>
+          <label>Marca<select name="brand" id="camBrand"></select></label>
+          <label>Nombre<input name="name" required placeholder="Entrada principal" /></label>
+          <label>Ubicación<input name="location" placeholder="Portón norte" /></label>
+          <label>IP / host<input name="ip_address" placeholder="192.168.1.100" /></label>
+          <label>Canal (NVR/DVR)<input name="channel" type="number" value="1" min="1" max="64" /></label>
+          <label>Puerto RTSP<input name="rtsp_port" type="number" value="554" /></label>
+          <label>Puerto web<input name="http_port" type="number" value="80" /></label>
+          <label>Usuario<input name="username" placeholder="admin" /></label>
+          <label>Clave<input name="password" type="password" placeholder="••••" /></label>
+          <label>URL video navegador<input name="stream_url" placeholder="http://IP/jpeg/stream (opcional)" /></label>
+          <label>URL panel web<input name="web_url" placeholder="http://IP (opcional)" /></label>
+          <label>URL RTSP manual<input name="rtsp_url" placeholder="rtsp://... (opcional)" /></label>
+          <label class="full">Grabador padre (solo canal)
+            <select name="parent_id" id="camParent"><option value="">— Ninguno —</option></select>
+          </label>
+          <label class="full">Notas<textarea name="notes" placeholder="App V360, XMEye, etc."></textarea></label>
+          <div class="full"><button class="btn btn-primary" type="submit">Guardar cámara</button></div>
+        </form>
+      </div>
+    </div>
+
     <div id="tab-assign" class="tab-panel hidden">
       <div class="panel">
         <h2>Programación de hoy</h2>
@@ -155,6 +196,7 @@
         <div class="stat"><span class="muted">Oficiales</span><b>${d.guards}</b></div>
         <div class="stat"><span class="muted">Sitios</span><b>${d.sites}</b></div>
         <div class="stat"><span class="muted">Turnos abiertos</span><b>${d.open_shifts}</b></div>
+        <div class="stat"><span class="muted">Cámaras</span><b>${d.cameras ?? 0}</b></div>
         <div class="stat"><span class="muted">Reportes hoy</span><b>${d.logs_today}</b></div>`;
       document.getElementById("activeShifts").innerHTML = (d.active_shifts || []).map(s =>
         `<div style="padding:8px 0;border-bottom:1px solid var(--border)"><strong>${s.guard?.name}</strong> en ${s.site?.name} · ${fmt(s.started_at)}</div>`
@@ -201,11 +243,51 @@
       const opts = d.sites.map(s => `<option value="${s.id}">${s.name}</option>`).join("");
       document.getElementById("sitePick").innerHTML = opts;
       document.getElementById("qrSite").innerHTML = opts;
+      document.getElementById("camSite").innerHTML = opts;
       if (d.sites[0]) {
         document.getElementById("cpSiteId").value = d.sites[0].id;
+        document.getElementById("camSiteId").value = d.sites[0].id;
         updateQrLinks();
         loadCheckpointsAdmin(d.sites[0].id);
+        loadCamerasAdmin(d.sites[0].id);
       }
+    }
+
+    async function loadCamMeta() {
+      const m = await api("/api/camera-meta");
+      document.getElementById("camBrand").innerHTML = Object.entries(m.brands).map(([k,v]) =>
+        `<option value="${k}">${v}</option>`).join("");
+    }
+
+    async function loadCamerasAdmin(siteId) {
+      const d = await api(`/api/sites/${siteId}/cameras`);
+      const recs = (d.cameras || []).filter(c => c.camera_type === "nvr" || c.camera_type === "dvr");
+      document.getElementById("camParent").innerHTML = '<option value="">— Ninguno —</option>' +
+        recs.map(r => `<option value="${r.id}">${r.name} (${r.camera_type_label})</option>`).join("");
+      document.getElementById("camList").innerHTML = (d.cameras || []).map(c =>
+        `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
+          <strong>${c.name}</strong> <span class="badge">${c.camera_type_label}</span><br>
+          <span class="muted">${c.brand_label} · ${c.location || c.ip_address || "—"} · Canal ${c.channel || 1}</span><br>
+          <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">
+            <a class="btn btn-ghost" href="/cameras/${c.id}" target="_blank">Ver</a>
+            ${c.web_url ? `<a class="btn btn-ghost" href="${c.web_url}" target="_blank">Panel web</a>` : ""}
+            <button class="btn btn-ghost" type="button" data-del="${c.id}">Quitar</button>
+          </div>
+        </div>`
+      ).join("") || "<p class='muted'>Sin cámaras. Agregue WiFi, NVR o DVR abajo.</p>";
+      document.getElementById("camList").querySelectorAll("[data-del]").forEach(btn => {
+        btn.onclick = async () => {
+          if (!confirm("¿Desactivar esta cámara?")) return;
+          await api(`/api/cameras/${btn.dataset.del}`, { method: "DELETE" });
+          loadCamerasAdmin(document.getElementById("camSite").value);
+        };
+      });
+    }
+
+    function updateCamSite() {
+      const sid = document.getElementById("camSite").value;
+      document.getElementById("camSiteId").value = sid;
+      loadCamerasAdmin(sid);
     }
 
     function updateQrLinks() {
@@ -255,10 +337,27 @@
       const gopts = g.guards.map(u => `<option value="${u.id}">${u.name}</option>`).join("");
       document.getElementById("guardPick").innerHTML = gopts;
       document.getElementById("patrolGuard").innerHTML = '<option value="">Todos</option>' + gopts;
+      await loadCamMeta();
       await Promise.all([loadDash(), loadShifts(), loadAssign(), loadSites(), loadPatrolSummary()]);
     }
 
+    document.getElementById("camSite").onchange = updateCamSite;
     document.getElementById("qrSite").onchange = updateQrLinks;
+    document.getElementById("camForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const body = Object.fromEntries(fd);
+      if (!body.parent_id) delete body.parent_id;
+      body.channel = Number(body.channel || 1);
+      body.rtsp_port = Number(body.rtsp_port || 554);
+      body.http_port = Number(body.http_port || 80);
+      body.site_id = Number(body.site_id);
+      if (body.parent_id) body.parent_id = Number(body.parent_id);
+      await api("/api/cameras", { method: "POST", body: JSON.stringify(body) });
+      e.target.reset();
+      document.getElementById("camSiteId").value = document.getElementById("camSite").value;
+      loadCamerasAdmin(document.getElementById("camSite").value);
+    };
     document.getElementById("patrolRefresh").onclick = loadPatrolSummary;
     document.getElementById("patrolPeriod").onchange = loadPatrolSummary;
     document.getElementById("patrolGuard").onchange = loadPatrolSummary;

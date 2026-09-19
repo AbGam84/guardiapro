@@ -26,10 +26,12 @@ from app.config import (
     UPLOADS_DIR,
 )
 from app.database import Base, engine, get_db
+from app.camera_util import BRANDS, CAMERA_TYPES
 from app.helpers import (
     ENTRY_LABELS,
     SEVERITY_LABELS,
     assignment_dict,
+    camera_dict,
     checkpoint_dict,
     company_dict,
     log_dict,
@@ -42,6 +44,7 @@ from app.models import (
     Company,
     LogEntry,
     PatrolCheckpoint,
+    SecurityCamera,
     Shift,
     ShiftAssignment,
     User,
@@ -53,6 +56,8 @@ from app.qr_util import checkpoint_scan_url, qr_png
 from app.reports import patrol_report_html, shift_report_html
 from app.schemas import (
     AssignmentIn,
+    CameraIn,
+    CameraUpdateIn,
     CheckpointIn,
     CompanySettingsIn,
     LogEntryIn,
@@ -63,7 +68,7 @@ from app.schemas import (
     SiteIn,
     UserIn,
 )
-from app.seed import seed_if_empty
+from app.seed import seed_cameras_if_empty, seed_if_empty
 from app.vendor_api import router as vendor_router
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -77,6 +82,7 @@ async def lifespan(app: FastAPI):
     db = next(get_db())
     try:
         seed_if_empty(db)
+        seed_cameras_if_empty(db)
     finally:
         db.close()
     yield
@@ -227,6 +233,161 @@ def create_site(
     db.commit()
     db.refresh(row)
     return {"site": site_dict(row)}
+
+
+def _valid_camera_type(t: str) -> str:
+    t = (t or "wifi").strip().lower()
+    if t not in CAMERA_TYPES:
+        raise HTTPException(status_code=400, detail=f"Tipo inválido. Use: {', '.join(CAMERA_TYPES)}")
+    return t
+
+
+@app.get("/api/camera-meta")
+def camera_meta():
+    return {"types": CAMERA_TYPES, "brands": BRANDS}
+
+
+@app.get("/api/sites/{site_id}/cameras")
+def list_site_cameras(
+    site_id: int,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Session = Depends(get_db),
+):
+    site = (
+        db.query(ClientSite)
+        .filter(ClientSite.id == site_id, ClientSite.company_id == user.company_id)
+        .first()
+    )
+    if not site:
+        raise HTTPException(status_code=404, detail="Sitio no encontrado")
+    show_secrets = user.role in ("admin", "supervisor")
+    rows = (
+        db.query(SecurityCamera)
+        .filter(
+            SecurityCamera.company_id == user.company_id,
+            SecurityCamera.site_id == site_id,
+            SecurityCamera.active.is_(True),
+        )
+        .order_by(SecurityCamera.camera_type.asc(), SecurityCamera.name.asc())
+        .all()
+    )
+    return {"cameras": [camera_dict(c, show_secrets=show_secrets) for c in rows]}
+
+
+@app.post("/api/cameras")
+def create_camera(
+    payload: CameraIn,
+    user: Annotated[User, Depends(require_roles("admin", "supervisor"))],
+    db: Session = Depends(get_db),
+):
+    site = (
+        db.query(ClientSite)
+        .filter(ClientSite.id == payload.site_id, ClientSite.company_id == user.company_id)
+        .first()
+    )
+    if not site:
+        raise HTTPException(status_code=404, detail="Sitio no encontrado")
+    cam_type = _valid_camera_type(payload.camera_type)
+    if payload.parent_id:
+        parent = (
+            db.query(SecurityCamera)
+            .filter(
+                SecurityCamera.id == payload.parent_id,
+                SecurityCamera.company_id == user.company_id,
+                SecurityCamera.site_id == payload.site_id,
+            )
+            .first()
+        )
+        if not parent:
+            raise HTTPException(status_code=404, detail="Grabador NVR/DVR no encontrado")
+    row = SecurityCamera(
+        company_id=user.company_id,
+        site_id=payload.site_id,
+        parent_id=payload.parent_id,
+        camera_type=cam_type,
+        name=payload.name.strip(),
+        brand=(payload.brand or "other").strip().lower(),
+        model_name=payload.model_name.strip(),
+        location=payload.location.strip(),
+        ip_address=payload.ip_address.strip(),
+        rtsp_port=payload.rtsp_port or 554,
+        http_port=payload.http_port or 80,
+        channel=max(1, payload.channel or 1),
+        username=payload.username.strip(),
+        password=payload.password,
+        rtsp_url=payload.rtsp_url.strip(),
+        stream_url=payload.stream_url.strip(),
+        web_url=payload.web_url.strip(),
+        onvif_port=payload.onvif_port or 80,
+        notes=payload.notes.strip(),
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return {"camera": camera_dict(row, show_secrets=True)}
+
+
+@app.get("/api/cameras/{camera_id}")
+def get_camera(
+    camera_id: int,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Session = Depends(get_db),
+):
+    row = (
+        db.query(SecurityCamera)
+        .filter(SecurityCamera.id == camera_id, SecurityCamera.company_id == user.company_id)
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Cámara no encontrada")
+    show_secrets = user.role in ("admin", "supervisor")
+    return {"camera": camera_dict(row, show_secrets=show_secrets)}
+
+
+@app.patch("/api/cameras/{camera_id}")
+def update_camera(
+    camera_id: int,
+    payload: CameraUpdateIn,
+    user: Annotated[User, Depends(require_roles("admin", "supervisor"))],
+    db: Session = Depends(get_db),
+):
+    row = (
+        db.query(SecurityCamera)
+        .filter(SecurityCamera.id == camera_id, SecurityCamera.company_id == user.company_id)
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Cámara no encontrada")
+    data = payload.model_dump(exclude_unset=True)
+    if "camera_type" in data and data["camera_type"]:
+        data["camera_type"] = _valid_camera_type(data["camera_type"])
+    if "brand" in data and data["brand"]:
+        data["brand"] = data["brand"].strip().lower()
+    for k, v in data.items():
+        if isinstance(v, str):
+            v = v.strip()
+        setattr(row, k, v)
+    db.commit()
+    db.refresh(row)
+    return {"camera": camera_dict(row, show_secrets=True)}
+
+
+@app.delete("/api/cameras/{camera_id}")
+def delete_camera(
+    camera_id: int,
+    user: Annotated[User, Depends(require_roles("admin", "supervisor"))],
+    db: Session = Depends(get_db),
+):
+    row = (
+        db.query(SecurityCamera)
+        .filter(SecurityCamera.id == camera_id, SecurityCamera.company_id == user.company_id)
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Cámara no encontrada")
+    row.active = False
+    db.commit()
+    return {"ok": True}
 
 
 @app.get("/api/sites/{site_id}/checkpoints")
@@ -774,6 +935,7 @@ def dashboard(
 ):
     guards = db.query(User).filter(User.company_id == user.company_id, User.role == "guard", User.active.is_(True)).count()
     sites = db.query(ClientSite).filter(ClientSite.company_id == user.company_id, ClientSite.active.is_(True)).count()
+    cameras = db.query(SecurityCamera).filter(SecurityCamera.company_id == user.company_id, SecurityCamera.active.is_(True)).count()
     open_shifts = db.query(Shift).filter(Shift.company_id == user.company_id, Shift.status == "open").count()
     today = datetime.utcnow().date()
     logs_today = (
@@ -801,6 +963,7 @@ def dashboard(
     return {
         "guards": guards,
         "sites": sites,
+        "cameras": cameras,
         "open_shifts": open_shifts,
         "logs_today": logs_today,
         "recent_incidents": [log_dict(x) for x in incidents],
@@ -888,6 +1051,11 @@ def page_guard():
 @app.get("/admin")
 def page_admin():
     return _html("admin.html")
+
+
+@app.get("/cameras/{camera_id}")
+def page_camera_view(camera_id: int):
+    return _html("cameras.html")
 
 
 @app.get("/vendor")

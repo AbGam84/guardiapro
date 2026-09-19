@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import hash_password
 from app.config import ADMIN_PASSWORD, ADMIN_USERNAME
-from app.models import ClientSite, Company, PatrolCheckpoint, ShiftAssignment, User
+from app.models import ClientSite, Company, PatrolCheckpoint, SecurityCamera, ShiftAssignment, User
 
 
 def seed_if_empty(db: Session) -> None:
@@ -95,6 +95,80 @@ def seed_if_empty(db: Session) -> None:
         PatrolCheckpoint(company_id=company.id, site_id=sites[1].id, name="Bodega interior", sort_order=2, qr_token=uuid.uuid4().hex),
     ]
     db.add_all(checkpoints)
+    db.flush()
+
+    nvr = SecurityCamera(
+        company_id=company.id,
+        site_id=sites[0].id,
+        camera_type="nvr",
+        name="NVR Condominio Jaco",
+        brand="hikvision",
+        ip_address="192.168.1.64",
+        rtsp_port=554,
+        http_port=80,
+        username="admin",
+        password="demo1234",
+        location="Cuarto eléctrico",
+        notes="Grabador principal 8 canales",
+    )
+    db.add(nvr)
+    db.flush()
+    db.add_all(
+        [
+            SecurityCamera(
+                company_id=company.id,
+                site_id=sites[0].id,
+                parent_id=nvr.id,
+                camera_type="nvr_channel",
+                name="Cam entrada vehicular",
+                brand="hikvision",
+                ip_address="192.168.1.64",
+                channel=1,
+                username="admin",
+                password="demo1234",
+                location="Portón principal",
+            ),
+            SecurityCamera(
+                company_id=company.id,
+                site_id=sites[0].id,
+                parent_id=nvr.id,
+                camera_type="nvr_channel",
+                name="Cam piscina",
+                brand="hikvision",
+                ip_address="192.168.1.64",
+                channel=3,
+                username="admin",
+                password="demo1234",
+                location="Área común",
+            ),
+            SecurityCamera(
+                company_id=company.id,
+                site_id=sites[1].id,
+                camera_type="wifi",
+                name="Cam bodega WiFi",
+                brand="tplink",
+                ip_address="192.168.1.50",
+                username="admin",
+                password="demo1234",
+                location="Interior bodega",
+                stream_url="",
+                notes="Tapo C200 — usar app Tapo si no hay stream web",
+            ),
+            SecurityCamera(
+                company_id=company.id,
+                site_id=sites[1].id,
+                camera_type="dvr",
+                name="DVR bodega 4 canales",
+                brand="xmeye",
+                ip_address="192.168.1.70",
+                rtsp_port=554,
+                http_port=34567,
+                username="admin",
+                password="demo1234",
+                location="Oficina bodega",
+            ),
+        ]
+    )
 
     today = date.today().isoformat()
     db.add_all(
@@ -119,4 +193,58 @@ def seed_if_empty(db: Session) -> None:
             ),
         ]
     )
+    db.commit()
+
+
+def seed_cameras_if_empty(db: Session) -> None:
+    if db.query(SecurityCamera).first():
+        return
+    company = db.query(Company).first()
+    if not company:
+        return
+    sites = db.query(ClientSite).filter(ClientSite.company_id == company.id).limit(2).all()
+    if not sites:
+        return
+    nvr = SecurityCamera(
+        company_id=company.id,
+        site_id=sites[0].id,
+        camera_type="nvr",
+        name="NVR demo sitio",
+        brand="hikvision",
+        ip_address="192.168.1.64",
+        username="admin",
+        password="demo1234",
+        location="Cuarto eléctrico",
+    )
+    db.add(nvr)
+    db.flush()
+    db.add(
+        SecurityCamera(
+            company_id=company.id,
+            site_id=sites[0].id,
+            parent_id=nvr.id,
+            camera_type="nvr_channel",
+            name="Cam entrada",
+            brand="hikvision",
+            ip_address="192.168.1.64",
+            channel=1,
+            username="admin",
+            password="demo1234",
+            location="Portón",
+        )
+    )
+    if len(sites) > 1:
+        db.add(
+            SecurityCamera(
+                company_id=company.id,
+                site_id=sites[1].id,
+                camera_type="wifi",
+                name="Cam WiFi demo",
+                brand="tplink",
+                ip_address="192.168.1.50",
+                username="admin",
+                password="demo1234",
+                location="Interior",
+            )
+        )
     db.commit()
