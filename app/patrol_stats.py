@@ -64,11 +64,14 @@ def patrol_period_stats(
     *,
     days: int,
     guard_id: int = 0,
+    site_id: int = 0,
 ) -> dict:
     since = datetime.utcnow() - timedelta(days=days)
     q = db.query(Shift).filter(Shift.company_id == company_id, Shift.started_at >= since)
     if guard_id:
         q = q.filter(Shift.guard_id == guard_id)
+    if site_id:
+        q = q.filter(Shift.site_id == site_id)
     shifts = q.order_by(Shift.started_at.desc()).all()
 
     by_guard: dict[int, dict] = {}

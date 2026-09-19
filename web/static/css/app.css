@@ -182,7 +182,17 @@ textarea { min-height: 80px; resize: vertical; }
 .two-col { grid-template-columns: 1fr 1fr; }
 @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
 
-.tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.tabs-nav { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+.tab-section { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.tab-section-label {
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  min-width: 4.5rem;
+}
+.tabs { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
 .tab {
   border: 1px solid var(--border);
   background: var(--panel);

@@ -20,10 +20,21 @@ class ShiftStartIn(BaseModel):
     site_id: int
     note: str = ""
     assignment_id: int | None = None
+    lat: float | None = None
+    lng: float | None = None
 
 
 class ShiftEndIn(BaseModel):
     note: str = ""
+    lat: float | None = None
+    lng: float | None = None
+
+
+class PatrolScheduleIn(BaseModel):
+    site_id: int
+    checkpoint_id: int | None = None
+    expected_time: str = "22:00"
+    grace_minutes: int = Field(default=30, ge=5, le=180)
 
 
 class SiteIn(BaseModel):
@@ -67,6 +78,7 @@ class UserIn(BaseModel):
     role: str = "guard"
     badge: str = ""
     phone: str = ""
+    client_site_id: int | None = None
 
 
 class CompanySettingsIn(BaseModel):

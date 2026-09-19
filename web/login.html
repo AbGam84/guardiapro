@@ -31,6 +31,7 @@
     <p class="muted" style="margin-top:16px;font-size:.78rem" id="demoHints">
       Demo admin: <code>admin</code> / <code>Admin2026!</code><br>
       Demo oficial: <code>juan</code> / <code>Guardia2026!</code><br>
+      Demo cliente: <code>cliente</code> / <code>Cliente2026!</code><br>
       Vendor: <a href="/vendor">/vendor</a>
     </p>
   </div>
@@ -52,7 +53,11 @@
         });
         setToken(data.access_token);
         const role = data.user.role;
-        location.href = role === "guard" ? "/guardia" : "/admin";
+        const next = new URLSearchParams(location.search).get("next");
+        if (next) location.href = next;
+        else if (role === "guard") location.href = "/guardia";
+        else if (role === "client") location.href = "/cliente";
+        else location.href = "/admin";
       } catch (ex) {
         err.textContent = ex.message;
         err.classList.remove("hidden");

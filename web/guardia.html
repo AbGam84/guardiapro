@@ -108,6 +108,7 @@
   </div>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="/static/js/api.js"></script>
+  <script src="/static/js/offline.js"></script>
   <script>
     let shift = null;
     let checkpoints = [];
@@ -133,10 +134,11 @@
       flashQr("Registrando marca…", true);
       const gps = await getGps();
       try {
-        const d = await api("/api/checkpoints/scan", {
+        const d = await apiWithOffline("/api/checkpoints/scan", {
           method: "POST",
           body: JSON.stringify({ qr_token: token, lat: gps.lat, lng: gps.lng }),
         });
+        if (d.queued) { flashQr("Sin red — marca guardada para sincronizar", true); return; }
         flashQr("✓ " + (d.message || "Marca OK") + " · " + (d.patrol?.total_distance_label || ""), true);
         showShift((await api(`/api/shifts/${shift.id}`)).shift);
       } catch (ex) {
@@ -240,7 +242,7 @@
         btn.onclick = async () => {
           if (!shift) return;
           const gps = await getGps();
-          await api(`/api/shifts/${shift.id}/log`, {
+          const r = await apiWithOffline(`/api/shifts/${shift.id}/log`, {
             method: "POST",
             body: JSON.stringify({
               entry_type: "checkpoint",
@@ -250,6 +252,7 @@
               lng: gps.lng,
             }),
           });
+          if (r.queued) { flashQr("Sin red — guardado para sincronizar", true); return; }
           const u = await api(`/api/shifts/${shift.id}`);
           showShift(u.shift);
         };
@@ -297,13 +300,24 @@
       document.getElementById("siteSelect").innerHTML = sites.sites.map(s => `<option value="${s.id}">${s.name}</option>`).join("");
       const active = await api("/api/shifts/active");
       showShift(active.shift);
+      await syncOfflineQueue();
     }
 
     document.getElementById("startForm").onsubmit = async (e) => {
       e.preventDefault();
       const fd = new FormData(e.target);
+      const gps = await getGps();
       try {
-        const d = await api("/api/shifts/start", { method: "POST", body: JSON.stringify({ site_id: Number(fd.get("site_id")), note: fd.get("note") || "" }) });
+        const d = await apiWithOffline("/api/shifts/start", {
+          method: "POST",
+          body: JSON.stringify({
+            site_id: Number(fd.get("site_id")),
+            note: fd.get("note") || "",
+            lat: gps.lat,
+            lng: gps.lng,
+          }),
+        });
+        if (d.queued) { alert("Sin conexión — inicie turno cuando tenga señal"); return; }
         showShift(d.shift);
       } catch (ex) {
         const el = document.getElementById("startErr");
@@ -320,7 +334,7 @@
       const gps = await getGps();
       const lat = gps.lat, lng = gps.lng;
       try {
-        const d = await api(`/api/shifts/${shift.id}/log`, {
+        const d = await apiWithOffline(`/api/shifts/${shift.id}/log`, {
           method: "POST",
           body: JSON.stringify({
             entry_type: fd.get("entry_type"),
@@ -329,6 +343,7 @@
             lat, lng,
           }),
         });
+        if (d.queued) { e.target.reset(); flashQr("Sin red — reporte en cola", true); return; }
         const wa = document.getElementById("waAlert");
         if (d.alert?.whatsapp_url) {
           wa.href = d.alert.whatsapp_url;
@@ -361,7 +376,11 @@
       e.preventDefault();
       if (!shift || !confirm("¿Cerrar turno?")) return;
       const fd = new FormData(e.target);
-      await api(`/api/shifts/${shift.id}/close`, { method: "POST", body: JSON.stringify({ note: fd.get("note") || "" }) });
+      const gps = await getGps();
+      await apiWithOffline(`/api/shifts/${shift.id}/close`, {
+        method: "POST",
+        body: JSON.stringify({ note: fd.get("note") || "", lat: gps.lat, lng: gps.lng }),
+      });
       shift = null;
       await init();
     };

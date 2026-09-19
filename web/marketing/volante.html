@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Excalibu Sentinel — volante</title>
+  <link rel="icon" href="/static/favicon.png" type="image/png" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #050c14;
+      --panel: #0f1824;
+      --gold: #ffb020;
+      --teal: #12c4a0;
+      --text: #f7fbff;
+      --muted: #8fa3bf;
+      --border: #243044;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Outfit", "Segoe UI", sans-serif;
+      background: #1a1a2e;
+      color: var(--text);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+    .toolbar {
+      display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+    }
+    .toolbar button, .toolbar a {
+      background: var(--teal); color: #050c14; border: none; padding: 10px 18px;
+      border-radius: 10px; font-weight: 700; cursor: pointer; text-decoration: none; font-size: .9rem;
+    }
+    .toolbar button.secondary { background: var(--gold); }
+
+    /* A4 volante */
+    .flyer {
+      width: 210mm;
+      min-height: 297mm;
+      background: linear-gradient(165deg, #0a1520 0%, var(--bg) 40%, #0d1a28 100%);
+      border: 1px solid var(--border);
+      box-shadow: 0 20px 60px rgba(0,0,0,.5);
+      padding: 14mm 16mm;
+      position: relative;
+      overflow: hidden;
+    }
+    .flyer::before {
+      content: "";
+      position: absolute; top: -80px; right: -80px;
+      width: 280px; height: 280px;
+      background: radial-gradient(circle, rgba(18,196,160,.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .flyer::after {
+      content: "";
+      position: absolute; bottom: -60px; left: -60px;
+      width: 220px; height: 220px;
+      background: radial-gradient(circle, rgba(255,176,32,.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .head {
+      display: flex; align-items: center; gap: 14px;
+      border-bottom: 2px solid rgba(18,196,160,.35);
+      padding-bottom: 12px; margin-bottom: 14px;
+      position: relative; z-index: 1;
+    }
+    .head img { width: 72px; height: 72px; border-radius: 16px; }
+    .head h1 { font-size: 1.65rem; font-weight: 800; line-height: 1.15; }
+    .head h1 span { color: var(--teal); }
+    .badge-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .badge {
+      font-size: .65rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+      padding: 4px 10px; border-radius: 999px;
+      background: rgba(18,196,160,.15); border: 1px solid rgba(18,196,160,.4); color: var(--teal);
+    }
+    .badge.gold { background: rgba(255,176,32,.12); border-color: rgba(255,176,32,.4); color: var(--gold); }
+
+    .hero-title {
+      font-size: 1.85rem; font-weight: 800; line-height: 1.2; margin-bottom: 10px;
+      position: relative; z-index: 1;
+    }
+    .hero-title em { color: var(--gold); font-style: normal; }
+    .slogan-box {
+      text-align: center; padding: 12px 14px; margin: 12px 0 16px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(18,196,160,.1), rgba(255,176,32,.08));
+      border: 1px solid rgba(18,196,160,.3);
+      font-size: .95rem; font-weight: 600; line-height: 1.45;
+      position: relative; z-index: 1;
+    }
+    .slogan-box .accent {
+      display: block; margin-top: 4px; font-weight: 800; font-size: 1.05rem;
+      background: linear-gradient(90deg, #ffd166, #ffb020, #12c4a0);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; position: relative; z-index: 1; }
+    .block {
+      background: rgba(255,255,255,.03); border: 1px solid var(--border);
+      border-radius: 12px; padding: 12px 14px;
+    }
+    .block h2 { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--teal); margin-bottom: 8px; }
+    .block ul { list-style: none; font-size: .82rem; line-height: 1.55; color: #dce8f8; }
+    .block li::before { content: "✓ "; color: var(--teal); font-weight: 700; }
+
+    .packages { margin-top: 12px; position: relative; z-index: 1; }
+    .packages h2 { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--gold); margin-bottom: 8px; }
+    .pkg-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .pkg {
+      background: rgba(255,255,255,.04); border: 1px solid var(--border);
+      border-radius: 10px; padding: 10px; font-size: .75rem; line-height: 1.45;
+    }
+    .pkg strong { display: block; color: var(--gold); font-size: .8rem; margin-bottom: 4px; }
+    .pkg.star { border-color: rgba(255,176,32,.5); background: rgba(255,176,32,.06); }
+
+    .footer {
+      margin-top: 14px; padding-top: 12px;
+      border-top: 2px solid rgba(18,196,160,.35);
+      display: flex; justify-content: space-between; align-items: flex-end; gap: 16px;
+      position: relative; z-index: 1;
+    }
+    .contact h3 { font-size: 1.1rem; color: var(--teal); margin-bottom: 4px; }
+    .contact p { font-size: .85rem; color: var(--muted); line-height: 1.5; }
+    .contact .wa { font-size: 1.35rem; font-weight: 800; color: var(--text); margin: 6px 0; }
+    .contact .demo { font-size: .78rem; word-break: break-all; color: var(--gold); }
+    .qr-box { text-align: center; }
+    .qr-box img { width: 88px; height: 88px; border-radius: 8px; background: #fff; padding: 4px; }
+    .qr-box span { display: block; font-size: .65rem; color: var(--muted); margin-top: 4px; }
+
+    .targets {
+      margin-top: 10px; font-size: .72rem; color: var(--muted); text-align: center;
+      position: relative; z-index: 1;
+    }
+
+    @media print {
+      body { background: white; padding: 0; }
+      .toolbar { display: none !important; }
+      .flyer { box-shadow: none; border: none; width: 210mm; min-height: 297mm; }
+    }
+    @page { size: A4; margin: 0; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button type="button" onclick="window.print()">Imprimir / Guardar PDF</button>
+    <a href="/publicidad-post">Ver post redes (1080×1080)</a>
+    <a href="/demo">Demo en vivo</a>
+  </div>
+
+  <article class="flyer">
+    <header class="head">
+      <img src="/static/excalibu-mark.svg" alt="Excalibu" />
+      <div>
+        <h1>Excalibu <span>Sentinel</span></h1>
+        <div class="badge-row">
+          <span class="badge gold" id="companyName">Excalibu Telecom CR</span>
+          <span class="badge">Costa Rica</span>
+          <span class="badge">Cámaras · WiFi · Software</span>
+        </div>
+      </div>
+    </header>
+
+    <h2 class="hero-title">Seguridad que se <em>ve</em>.<br>Rondas que se <em>prueban</em>.</h2>
+
+    <div class="slogan-box">
+      Su guardia cuida el sitio.
+      <span class="accent">Excalibu cuida al guardia.</span>
+    </div>
+
+    <div class="grid-2">
+      <section class="block">
+        <h2>Instalación física</h2>
+        <ul>
+          <li>Cámaras WiFi, IP, NVR y DVR</li>
+          <li>Red WiFi e internet en el sitio</li>
+          <li>Bodegas, condominios, plazas</li>
+          <li>Configuración y capacitación</li>
+        </ul>
+      </section>
+      <section class="block">
+        <h2>Excalibu Sentinel</h2>
+        <ul>
+          <li>Bitácora digital del oficial</li>
+          <li>Rondas con QR en el muro</li>
+          <li>GPS y distancia recorrida</li>
+          <li>Alertas si no cumplen horario</li>
+          <li>Portal cliente (solo lectura)</li>
+          <li>Reportes PDF para administración</li>
+        </ul>
+      </section>
+    </div>
+
+    <section class="packages">
+      <h2>Paquetes</h2>
+      <div class="pkg-grid">
+        <div class="pkg">
+          <strong>Paquete A</strong>
+          Sitio conectado<br>Cámaras + WiFi + instalación
+        </div>
+        <div class="pkg">
+          <strong>Paquete B</strong>
+          Rondas digitales<br>Software + QR + panel admin
+        </div>
+        <div class="pkg star">
+          <strong>Paquete C ★</strong>
+          Todo integrado<br>Cámaras + red + Excalibu Sentinel
+        </div>
+      </div>
+    </section>
+
+    <p class="targets">
+      Para empresas de seguridad · condominios · bodegas · comercios · industria
+    </p>
+
+    <footer class="footer">
+      <div class="contact">
+        <h3>Excalibu Telecom CR</h3>
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:4px">Cotización sin compromiso</p>
+        <p class="wa" id="waLine">WhatsApp +506 6073-6546</p>
+        <p class="demo">Demo: excalibu-sentinel.onrender.com/demo</p>
+        <p style="font-size:.72rem;margin-top:6px">Instalación local · Soporte en español</p>
+      </div>
+      <div class="qr-box">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=https%3A%2F%2Fexcalibu-sentinel.onrender.com%2Fdemo" alt="QR demo" width="88" height="88" />
+        <span>Escanee — demo en 2 min</span>
+      </div>
+    </footer>
+  </article>
+  <script>
+    fetch("/api/product").then(r => r.json()).then(p => {
+      if (p.company_name) document.getElementById("companyName").textContent = p.company_name;
+      if (p.support_display) document.getElementById("waLine").textContent = "WhatsApp " + p.support_display;
+    }).catch(() => {});
+  </script>
+</body>
+</html>

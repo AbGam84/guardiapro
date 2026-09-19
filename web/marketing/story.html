@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Excalibu Telecom CR — Story vertical</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root { --bg:#050c14; --gold:#ffb020; --teal:#12c4a0; --text:#f7fbff; --muted:#8fa3bf; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body {
+      font-family:"Outfit","Segoe UI",sans-serif; background:#111;
+      min-height:100vh; display:flex; flex-direction:column; align-items:center;
+      padding:16px; gap:12px;
+    }
+    .toolbar { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+    .toolbar button, .toolbar a {
+      background:var(--teal); color:#050c14; border:none; padding:10px 16px;
+      border-radius:10px; font-weight:700; cursor:pointer; text-decoration:none; font-size:.85rem;
+    }
+    .hint { color:#888; font-size:.8rem; text-align:center; max-width:360px; }
+    /* Story 9:16 — 1080×1920 */
+    .story-wrap {
+      width:min(1080px, 56.25vh);
+      aspect-ratio: 9 / 16;
+      max-height:95vh;
+    }
+    .story {
+      width:100%; height:100%;
+      background:linear-gradient(180deg, #0a1520 0%, var(--bg) 35%, #0f1e30 100%);
+      padding:7% 8%;
+      display:flex; flex-direction:column;
+      justify-content:space-between;
+      position:relative; overflow:hidden;
+      box-shadow:0 24px 80px rgba(0,0,0,.6);
+    }
+    .story::before {
+      content:""; position:absolute; inset:0;
+      background:
+        radial-gradient(ellipse 90% 40% at 50% 0%, rgba(18,196,160,.2), transparent),
+        radial-gradient(ellipse 70% 35% at 50% 100%, rgba(255,176,32,.12), transparent);
+      pointer-events:none;
+    }
+    .top { text-align:center; position:relative; z-index:1; }
+    .top img { width:28%; max-width:140px; border-radius:22%; margin-bottom:12px; }
+    .top h1 { font-size:clamp(1.3rem, 4.5vw, 2rem); font-weight:800; line-height:1.1; }
+    .top h1 span { color:var(--teal); }
+    .pill {
+      display:inline-block; margin-top:10px;
+      font-size:clamp(.5rem, 2vw, .7rem); font-weight:700; letter-spacing:.06em;
+      padding:6px 14px; border-radius:999px;
+      background:rgba(255,176,32,.15); border:1px solid rgba(255,176,32,.45); color:var(--gold);
+    }
+    .mid { position:relative; z-index:1; flex:1; display:flex; flex-direction:column; justify-content:center; gap:14px; padding:6% 0; }
+    .hook {
+      font-size:clamp(1.35rem, 5vw, 2.2rem); font-weight:800; line-height:1.2; text-align:center;
+    }
+    .hook em { color:var(--gold); font-style:normal; }
+    .list { display:flex; flex-direction:column; gap:10px; }
+    .item {
+      background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);
+      border-radius:14px; padding:12px 14px;
+      font-size:clamp(.72rem, 2.5vw, .95rem); line-height:1.35; color:#dce8f8;
+    }
+    .item strong { color:var(--teal); display:block; margin-bottom:2px; font-size:.95em; }
+    .slogan {
+      text-align:center; font-size:clamp(.75rem, 2.8vw, 1rem); font-weight:600;
+      color:var(--muted); line-height:1.45; padding:0 4%;
+    }
+    .slogan b { color:var(--gold); font-weight:800; }
+    .bottom {
+      position:relative; z-index:1; text-align:center;
+      border-top:2px solid rgba(18,196,160,.35); padding-top:5%;
+    }
+    .wa { font-size:clamp(1.1rem, 4vw, 1.75rem); font-weight:800; margin-bottom:8px; }
+    .demo { font-size:clamp(.6rem, 2vw, .85rem); color:var(--gold); font-weight:600; margin-bottom:12px; }
+    .qr img {
+      width:clamp(72px, 22vw, 110px); border-radius:10px; background:#fff; padding:5px;
+    }
+    .swipe { font-size:clamp(.55rem, 1.8vw, .72rem); color:var(--muted); margin-top:10px; }
+    @media print {
+      body { padding:0; background:white; }
+      .toolbar, .hint { display:none; }
+      .story-wrap { width:1080px; height:1920px; max-height:none; aspect-ratio:auto; }
+      .story { height:1920px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button type="button" onclick="window.print()">Imprimir / captura</button>
+    <a href="index.html">Menú</a>
+    <a href="post-redes-1080.html">Post cuadrado</a>
+  </div>
+  <p class="hint">Vertical 1080×1920 — WhatsApp Status, Instagram Story, Facebook Story</p>
+
+  <div class="story-wrap">
+    <div class="story">
+      <div class="top">
+        <img src="excalibu-mark.svg" alt="" />
+        <h1>Excalibu <span>Sentinel</span></h1>
+        <span class="pill">EXCALIBU TELECOM CR</span>
+      </div>
+
+      <div class="mid">
+        <h2 class="hook">¿Paga seguridad<br>sin <em>prueba</em>?</h2>
+        <div class="list">
+          <div class="item"><strong>📹 Instalo</strong>Cámaras WiFi, NVR y DVR en su sitio</div>
+          <div class="item"><strong>📶 Conecto</strong>WiFi e internet donde lo necesite</div>
+          <div class="item"><strong>📱 Activo</strong>Rondas QR, GPS, alertas y bitácora</div>
+          <div class="item"><strong>📊 Demuestro</strong>Portal para que su cliente vea el servicio</div>
+        </div>
+        <p class="slogan">Su guardia cuida el sitio.<br><b>Excalibu cuida al guardia.</b></p>
+      </div>
+
+      <div class="bottom">
+        <div class="wa">WhatsApp 6073-6546</div>
+        <div class="demo">excalibu-sentinel.onrender.com/demo</div>
+        <div class="qr">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=https%3A%2F%2Fexcalibu-sentinel.onrender.com%2Fdemo" alt="QR demo" />
+        </div>
+        <p class="swipe">Excalibu Telecom CR · Costa Rica</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

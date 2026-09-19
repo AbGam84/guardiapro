@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Excalibu Sentinel — administración</title>
   <link rel="icon" href="/static/favicon.png" type="image/png" />
-  <link rel="stylesheet" href="/static/css/app.css?v=3" />
+  <link rel="stylesheet" href="/static/css/app.css?v=4" />
 </head>
 <body>
   <div class="shell">
@@ -17,16 +17,37 @@
       </div>
     </div>
 
-    <div class="tabs" id="tabs">
-      <button class="tab active" data-tab="dash">Resumen</button>
-      <button class="tab" data-tab="shifts">Bitácoras</button>
-      <button class="tab" data-tab="patrol">Recorridos</button>
-      <button class="tab" data-tab="qr">QR rondas</button>
-      <button class="tab" data-tab="cameras">Cámaras</button>
-      <button class="tab" data-tab="assign">Programación</button>
-      <button class="tab" data-tab="sites">Sitios</button>
-      <button class="tab" data-tab="settings">Ajustes</button>
-    </div>
+    <nav class="tabs-nav" id="tabs">
+      <div class="tab-section">
+        <span class="tab-section-label">Operación</span>
+        <div class="tabs">
+          <button class="tab active" data-tab="dash">Resumen</button>
+          <button class="tab" data-tab="alerts">Alertas</button>
+          <button class="tab" data-tab="shifts">Bitácoras</button>
+          <button class="tab" data-tab="assign">Programación</button>
+        </div>
+      </div>
+      <div class="tab-section">
+        <span class="tab-section-label">Rondas</span>
+        <div class="tabs">
+          <button class="tab" data-tab="patrol">Recorridos</button>
+          <button class="tab" data-tab="qr">QR rondas</button>
+        </div>
+      </div>
+      <div class="tab-section">
+        <span class="tab-section-label">Sitio</span>
+        <div class="tabs">
+          <button class="tab" data-tab="cameras">Cámaras</button>
+          <button class="tab" data-tab="sites">Sitios</button>
+        </div>
+      </div>
+      <div class="tab-section">
+        <span class="tab-section-label">Config</span>
+        <div class="tabs">
+          <button class="tab" data-tab="settings">Ajustes</button>
+        </div>
+      </div>
+    </nav>
 
     <div id="tab-dash" class="tab-panel">
       <div class="stats" id="stats"></div>
@@ -35,8 +56,24 @@
         <div id="activeShifts"></div>
       </div>
       <div class="panel" style="margin-top:16px">
+        <h2>Alertas de ronda pendientes</h2>
+        <div id="dashAlerts"></div>
+        <a class="btn btn-ghost" href="#" onclick="document.querySelector('[data-tab=alerts]').click();return false" style="margin-top:8px">Ver todas</a>
+      </div>
+      <div class="panel" style="margin-top:16px">
         <h2>Incidentes recientes</h2>
         <div id="incidents" class="log-list"></div>
+      </div>
+    </div>
+
+    <div id="tab-alerts" class="tab-panel hidden">
+      <div class="panel">
+        <h2>Rondas no cumplidas</h2>
+        <p class="muted">Si el guardia no marcó QR a la hora programada, aparece aquí y puede avisar por WhatsApp.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+          <button class="btn btn-primary" type="button" id="alertRefresh">Actualizar</button>
+        </div>
+        <div id="missedAlerts"></div>
       </div>
     </div>
 
@@ -93,6 +130,19 @@
           <button class="btn btn-primary" type="submit">Crear punto + QR</button>
         </form>
         <div id="cpList" style="margin-top:16px"></div>
+        <hr style="border-color:var(--border);margin:16px 0" />
+        <h3>Horarios obligatorios de ronda</h3>
+        <p class="muted" style="font-size:.85rem">Hora UTC · tolerancia en minutos después de la hora programada.</p>
+        <form id="schForm" class="form-grid two-col">
+          <input type="hidden" name="site_id" id="schSiteId" />
+          <label>Punto (opcional)
+            <select name="checkpoint_id" id="schCheckpoint"><option value="">Cualquier punto del sitio</option></select>
+          </label>
+          <label>Hora HH:MM<input name="expected_time" value="22:00" required placeholder="22:00" /></label>
+          <label>Tolerancia (min)<input name="grace_minutes" type="number" value="30" min="5" max="180" /></label>
+          <div class="full"><button class="btn btn-primary" type="submit">Agregar horario</button></div>
+        </form>
+        <div id="schList" style="margin-top:16px"></div>
       </div>
     </div>
 
@@ -205,6 +255,51 @@
       document.getElementById("incidents").innerHTML = (d.recent_incidents || []).map(l =>
         `<div class="log-item incidente"><div class="log-meta">${fmt(l.created_at)} · ${l.severity_label}</div>${l.note}</div>`
       ).join("") || "<p class='muted'>Sin incidentes</p>";
+      const alertBox = document.getElementById("dashAlerts");
+      if (alertBox) {
+        alertBox.innerHTML = (d.missed_alerts || []).slice(0, 3).map(a =>
+          `<div style="padding:8px 0;border-bottom:1px solid var(--border)"><strong>${a.site_name}</strong> · ${a.expected_time}<br><span class="muted">${a.message.split("\n")[0]}</span></div>`
+        ).join("") || "<p class='muted'>Sin alertas pendientes</p>";
+      }
+    }
+
+    async function loadMissedAlerts() {
+      const d = await api("/api/alerts/missed?status=pending&check=1");
+      document.getElementById("missedAlerts").innerHTML = (d.alerts || []).map(a =>
+        `<div style="padding:12px 0;border-bottom:1px solid var(--border)">
+          <span class="badge open">PENDIENTE</span>
+          <strong style="display:block;margin:8px 0 4px">${a.site_name} · ${a.checkpoint_name} · ${a.expected_time}</strong>
+          <span class="muted">${a.message.replace(/\n/g, "<br>")}</span>
+          <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+            ${a.whatsapp_url ? `<a class="btn btn-primary" href="${a.whatsapp_url}" target="_blank">WhatsApp supervisor</a>` : ""}
+            <button class="btn btn-ghost" type="button" data-ack="${a.id}">Marcar revisada</button>
+          </div>
+        </div>`
+      ).join("") || "<p class='muted'>Sin rondas incumplidas hoy</p>";
+      document.getElementById("missedAlerts").querySelectorAll("[data-ack]").forEach(btn => {
+        btn.onclick = async () => {
+          await api(`/api/alerts/missed/${btn.dataset.ack}/acknowledge`, { method: "POST" });
+          loadMissedAlerts();
+          loadDash();
+        };
+      });
+    }
+
+    async function loadSchedules(siteId) {
+      const d = await api(`/api/patrol-schedules?site_id=${siteId}`);
+      document.getElementById("schList").innerHTML = (d.schedules || []).filter(s => s.active !== false).map(s =>
+        `<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <div><strong>${s.expected_time}</strong> · ${s.checkpoint_name}<br><span class="muted">Tolerancia ${s.grace_minutes} min</span></div>
+          <button class="btn btn-ghost" type="button" data-del-sch="${s.id}">Quitar</button>
+        </div>`
+      ).join("") || "<p class='muted'>Sin horarios. Agregue abajo (ej. 06:00, 14:00, 22:00).</p>";
+      document.getElementById("schList").querySelectorAll("[data-del-sch]").forEach(btn => {
+        btn.onclick = async () => {
+          if (!confirm("¿Quitar este horario?")) return;
+          await api(`/api/patrol-schedules/${btn.dataset.delSch}`, { method: "DELETE" });
+          loadSchedules(document.getElementById("qrSite").value);
+        };
+      });
     }
 
     async function loadShifts() {
@@ -294,13 +389,19 @@
     function updateQrLinks() {
       const sid = document.getElementById("qrSite").value;
       document.getElementById("cpSiteId").value = sid;
+      document.getElementById("schSiteId").value = sid;
       document.getElementById("qrPrint").href = `/api/sites/${sid}/qr-print`;
       loadCheckpointsAdmin(sid);
+      loadSchedules(sid);
     }
 
     async function loadCheckpointsAdmin(siteId) {
       const d = await api(`/api/sites/${siteId}/checkpoints`);
-      document.getElementById("cpList").innerHTML = (d.checkpoints || []).map(cp =>
+      const cps = d.checkpoints || [];
+      document.getElementById("schCheckpoint").innerHTML =
+        '<option value="">Cualquier punto del sitio</option>' +
+        cps.map(cp => `<option value="${cp.id}">${cp.name}</option>`).join("");
+      document.getElementById("cpList").innerHTML = cps.map(cp =>
         `<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px">
           <img src="/api/checkpoints/${cp.id}/qr.png" width="64" height="64" alt="QR"/>
           <div><strong>${cp.name}</strong><br><span class="muted">${cp.description || ""}</span></div>
@@ -339,7 +440,7 @@
       document.getElementById("guardPick").innerHTML = gopts;
       document.getElementById("patrolGuard").innerHTML = '<option value="">Todos</option>' + gopts;
       await loadCamMeta();
-      await Promise.all([loadDash(), loadShifts(), loadAssign(), loadSites(), loadPatrolSummary()]);
+      await Promise.all([loadDash(), loadMissedAlerts(), loadShifts(), loadAssign(), loadSites(), loadPatrolSummary()]);
     }
 
     document.getElementById("camSite").onchange = updateCamSite;
@@ -359,7 +460,21 @@
       document.getElementById("camSiteId").value = document.getElementById("camSite").value;
       loadCamerasAdmin(document.getElementById("camSite").value);
     };
+    document.getElementById("alertRefresh").onclick = loadMissedAlerts;
     document.getElementById("patrolRefresh").onclick = loadPatrolSummary;
+    document.getElementById("schForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const body = {
+        site_id: Number(fd.get("site_id")),
+        expected_time: fd.get("expected_time"),
+        grace_minutes: Number(fd.get("grace_minutes") || 30),
+      };
+      const cp = fd.get("checkpoint_id");
+      if (cp) body.checkpoint_id = Number(cp);
+      await api("/api/patrol-schedules", { method: "POST", body: JSON.stringify(body) });
+      loadSchedules(document.getElementById("qrSite").value);
+    };
     document.getElementById("patrolPeriod").onchange = loadPatrolSummary;
     document.getElementById("patrolGuard").onchange = loadPatrolSummary;
     document.getElementById("cpForm").onsubmit = async (e) => {

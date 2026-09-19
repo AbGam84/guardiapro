@@ -28,6 +28,7 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     company_id: Mapped[int] = mapped_column(Integer, ForeignKey("companies.id"), index=True)
+    client_site_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("client_sites.id"), nullable=True, index=True)
     name: Mapped[str] = mapped_column(String(120))
     username: Mapped[str] = mapped_column(String(80), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
@@ -100,6 +101,43 @@ class Shift(Base):
     ended_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     start_note: Mapped[str] = mapped_column(Text, default="")
     end_note: Mapped[str] = mapped_column(Text, default="")
+    start_lat: Mapped[float | None] = mapped_column(Float, nullable=True)
+    start_lng: Mapped[float | None] = mapped_column(Float, nullable=True)
+    end_lat: Mapped[float | None] = mapped_column(Float, nullable=True)
+    end_lng: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+
+class PatrolRoundSchedule(Base):
+    """Horarios obligatorios de ronda por sitio / checkpoint."""
+
+    __tablename__ = "patrol_round_schedules"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    company_id: Mapped[int] = mapped_column(Integer, ForeignKey("companies.id"), index=True)
+    site_id: Mapped[int] = mapped_column(Integer, ForeignKey("client_sites.id"), index=True)
+    checkpoint_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("patrol_checkpoints.id"), nullable=True)
+    expected_time: Mapped[str] = mapped_column(String(5), default="22:00")  # HH:MM UTC
+    grace_minutes: Mapped[int] = mapped_column(Integer, default=30)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class PatrolMissedAlert(Base):
+    """Alerta cuando no se cumplió una ronda programada."""
+
+    __tablename__ = "patrol_missed_alerts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    company_id: Mapped[int] = mapped_column(Integer, ForeignKey("companies.id"), index=True)
+    site_id: Mapped[int] = mapped_column(Integer, ForeignKey("client_sites.id"), index=True)
+    checkpoint_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("patrol_checkpoints.id"), nullable=True)
+    schedule_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("patrol_round_schedules.id"), nullable=True)
+    alert_date: Mapped[str] = mapped_column(String(10), index=True)  # YYYY-MM-DD
+    expected_time: Mapped[str] = mapped_column(String(5), default="")
+    message: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending | acknowledged
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+    acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class SecurityCamera(Base):

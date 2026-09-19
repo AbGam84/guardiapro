@@ -34,13 +34,14 @@
           <span class="slogan-line">Su <span class="word-guardia">guardia</span> cuida el <span class="word-sitio">sitio</span>.</span>
           <span class="slogan-line slogan-line-accent"><span class="word-excalibu">Excalibu</span> cuida al guardia.</span>
         </blockquote>
-        <p class="brand-tagline">Empresas de seguridad · Costa Rica</p>
+        <p class="brand-tagline" id="companyLine">Excalibu Telecom CR · Costa Rica</p>
       </div>
 
       <div class="feat">
         <div><strong>📱 Oficial en campo</strong> Turno, QR en muros, distancia GPS, fotos de incidente.</div>
         <div><strong>🖥️ Centro de control</strong> Cámaras WiFi/NVR/DVR, reportes semanal y quincenal.</div>
-        <div><strong>📊 Para su cliente final</strong> PDF con marcas, recorrido y hora — prueba de servicio.</div>
+        <div><strong>📊 Portal cliente</strong> El condominio ve turnos, rondas e incidentes — solo lectura, sin acceso admin.</div>
+        <div><strong>⏰ Alertas de ronda</strong> Si no marcaron a las 22:00, el supervisor recibe aviso + WhatsApp.</div>
       </div>
 
       <h2 style="font-size:1rem;margin:18px 0 8px">Por qué somos diferentes</h2>
@@ -55,12 +56,14 @@
       <div class="cta">
         <a class="btn btn-primary btn-block" href="/guardia">Ver demo — celular del guardia</a>
         <a class="btn btn-ok btn-block" href="/admin">Ver demo — panel administrativo</a>
+        <a class="btn btn-ghost btn-block" href="/cliente">Ver demo — portal cliente</a>
       </div>
 
       <div class="cred">
         <strong style="color:var(--text)">Acceso demo:</strong><br><br>
         Guardia: <code>juan</code> / <code>Guardia2026!</code><br>
-        Admin: <code>admin</code> / <code>Admin2026!</code>
+        Admin: <code>admin</code> / <code>Admin2026!</code><br>
+        Cliente: <code>cliente</code> / <code>Cliente2026!</code>
       </div>
 
       <a class="btn btn-primary btn-block wa" id="waBtn" href="#">WhatsApp — quiero esto para mi empresa</a>
@@ -68,9 +71,15 @@
   </div>
   <script>
     const msg = encodeURIComponent(
-      "Hola, vi la demo de Excalibu Sentinel. Quiero la capa digital que audita mis rondas y cámaras. ¿Me cotizan?"
+      "Hola Excalibu Telecom CR, vi la demo de Excalibu Sentinel. Quiero cotización de cámaras, WiFi y software de rondas."
     );
-    document.getElementById("waBtn").href = "https://wa.me/50663706546?text=" + msg;
+    fetch("/api/product").then(r => r.json()).then(p => {
+      document.getElementById("companyLine").textContent = (p.company_name || "Excalibu Telecom CR") + " · Costa Rica";
+      const wa = (p.whatsapp_url || "https://wa.me/50660736546");
+      document.getElementById("waBtn").href = wa + "?text=" + msg;
+    }).catch(() => {
+      document.getElementById("waBtn").href = "https://wa.me/50660736546?text=" + msg;
+    });
   </script>
 </body>
 </html>

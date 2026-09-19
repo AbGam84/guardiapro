@@ -1,0 +1,86 @@
+═══════════════════════════════════════════════════════════
+  GUÍA CANVA — Excalibu Telecom CR
+  Excalibu Sentinel + Cámaras + WiFi
+═══════════════════════════════════════════════════════════
+
+DIMENSIONES RECOMENDADAS
+────────────────────────
+• Instagram / Facebook feed:  1080 × 1080 px
+• Story / Estado WhatsApp:    1080 × 1920 px
+• Volante impreso:            A4 (210 × 297 mm) o Letter
+• WhatsApp catálogo:          800 × 800 px
+
+
+COLORES (copiar en Canva)
+────────────────────────
+• Fondo oscuro:    #050C14
+• Panel:           #0F1824
+• Dorado:          #FFB020
+• Verde lagoon:    #12C4A0
+• Texto claro:     #F7FBFF
+• Texto muted:     #8FA3BF
+
+
+TIPOGRAFÍA
+────────────────────────
+• Outfit (Google Fonts) — igual que la demo
+• Alternativa Canva: Montserrat ExtraBold + Open Sans
+
+
+TITULARES LISTOS
+────────────────────────
+1. "Seguridad que se ve. Rondas que se prueban."
+2. "Cámaras + WiFi + control de rondas"
+3. "No le vendo otra cámara. Le vendo evidencia."
+4. "Su guardia cuida el sitio. Excalibu cuida al guardia."
+
+
+TEXTO CORTO PARA POST (copiar)
+────────────────────────
+Distribuidor e instalador · Costa Rica
+
+📹 Cámaras WiFi, NVR, DVR
+📶 Internet y WiFi en su sitio
+📱 Excalibu Sentinel — rondas QR, GPS, alertas
+📊 Portal para su cliente
+
+Condominios · Bodegas · Empresas de seguridad
+
+Demo: excalibu-sentinel.onrender.com/demo
+WhatsApp: +506 6073-6546
+
+
+STORY — 3 DIAPOSITIVAS
+────────────────────────
+Diapo 1: "¿Paga seguridad sin prueba?"
+Diapo 2: "Instalo cámaras + WiFi + Excalibu Sentinel"
+Diapo 3: "Demo gratis → [QR] · WA 6073-6546"
+
+
+ARCHIVOS HTML LISTOS (abrir en navegador)
+────────────────────────
+• Índice marketing: http://127.0.0.1:8097/marketing/
+• Volante A4 PDF:   http://127.0.0.1:8097/marketing/volante
+• Post 1080×1080:   http://127.0.0.1:8097/marketing/post
+• Story:            http://127.0.0.1:8097/marketing/story
+
+Botón "Imprimir / Guardar PDF" → destino "Guardar como PDF"
+
+
+LOGO
+────────────────────────
+Usar archivo: web/static/excalibu-mark.svg
+(o excalibu-mark.png si lo generó con scripts/generate_excalibu_logo.py)
+
+
+PASOS EN CANVA (5 minutos)
+────────────────────────
+1. Crear diseño → Instagram Post (1080×1080)
+2. Fondo: degradado #050C14 → #0F1824
+3. Subir logo Excalibu
+4. Título dorado + subtítulo teal
+5. 4 íconos: cámara, wifi, celular, gráfico
+6. Pie: WhatsApp grande + QR a la demo
+7. Descargar PNG y publicar
+
+═══════════════════════════════════════════════════════════

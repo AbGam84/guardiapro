@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Excalibu Sentinel — post redes</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #050c14;
+      --gold: #ffb020;
+      --teal: #12c4a0;
+      --text: #f7fbff;
+      --muted: #8fa3bf;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Outfit", "Segoe UI", sans-serif;
+      background: #111;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      gap: 16px;
+    }
+    .toolbar {
+      display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+    }
+    .toolbar button, .toolbar a {
+      background: var(--teal); color: #050c14; border: none; padding: 10px 18px;
+      border-radius: 10px; font-weight: 700; cursor: pointer; text-decoration: none; font-size: .9rem;
+    }
+    .hint { color: #888; font-size: .85rem; text-align: center; max-width: 420px; }
+
+    /* Instagram/Facebook square 1080 */
+    .post-wrap { width: min(1080px, 95vw); aspect-ratio: 1; }
+    .post {
+      width: 100%; height: 100%;
+      background: linear-gradient(145deg, #0a1520 0%, var(--bg) 45%, #0f1e30 100%);
+      border-radius: 4px;
+      padding: 6%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 24px 80px rgba(0,0,0,.6);
+    }
+    .post::before {
+      content: "";
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 90% 10%, rgba(18,196,160,.18), transparent),
+        radial-gradient(ellipse 60% 40% at 10% 90%, rgba(255,176,32,.12), transparent);
+      pointer-events: none;
+    }
+    .top { display: flex; align-items: center; gap: 4%; position: relative; z-index: 1; }
+    .top img { width: 18%; border-radius: 18%; min-width: 64px; }
+    .top-text h1 { font-size: clamp(1.4rem, 5vw, 2.4rem); font-weight: 800; line-height: 1.1; color: var(--text); }
+    .top-text h1 span { color: var(--teal); }
+    .pill {
+      display: inline-block; margin-top: 8px;
+      font-size: clamp(.55rem, 2vw, .75rem); font-weight: 700; letter-spacing: .05em;
+      padding: 6px 12px; border-radius: 999px;
+      background: rgba(255,176,32,.15); border: 1px solid rgba(255,176,32,.4); color: var(--gold);
+    }
+
+    .mid { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 4% 0; }
+    .headline {
+      font-size: clamp(1.5rem, 5.5vw, 2.8rem); font-weight: 800; line-height: 1.15;
+      margin-bottom: 4%;
+    }
+    .headline em { color: var(--gold); font-style: normal; }
+    .features {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 3%;
+      font-size: clamp(.65rem, 2.2vw, .95rem); line-height: 1.4; color: #dce8f8;
+    }
+    .feat {
+      background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
+      border-radius: 12px; padding: 3% 4%;
+    }
+    .feat strong { display: block; color: var(--teal); font-size: .9em; margin-bottom: 2px; }
+
+    .bottom {
+      position: relative; z-index: 1;
+      display: flex; justify-content: space-between; align-items: flex-end; gap: 4%;
+      border-top: 2px solid rgba(18,196,160,.35); padding-top: 4%;
+    }
+    .cta .wa {
+      font-size: clamp(1rem, 3.5vw, 1.6rem); font-weight: 800; color: var(--text);
+    }
+    .cta .sub { font-size: clamp(.6rem, 2vw, .85rem); color: var(--muted); margin-top: 4px; }
+    .cta .demo { font-size: clamp(.55rem, 1.8vw, .78rem); color: var(--gold); margin-top: 6px; font-weight: 600; }
+    .qr img {
+      width: clamp(64px, 18vw, 120px); height: auto;
+      border-radius: 8px; background: #fff; padding: 4px;
+    }
+
+    @media print {
+      body { padding: 0; background: white; }
+      .toolbar, .hint { display: none; }
+      .post-wrap { width: 1080px; }
+      .post { border-radius: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button type="button" onclick="window.print()">Imprimir / captura</button>
+    <a href="/publicidad-volante">Ver volante A4</a>
+  </div>
+  <p class="hint">Cuadrado 1080×1080 — haga captura de pantalla o imprima a PDF. También puede usar como guía en Canva.</p>
+
+  <div class="post-wrap">
+    <div class="post" id="capture">
+      <div class="top">
+        <img src="/static/excalibu-mark.svg" alt="" />
+        <div class="top-text">
+          <h1>Excalibu <span>Sentinel</span></h1>
+          <span class="pill" id="companyPill">EXCALIBU TELECOM CR</span>
+        </div>
+      </div>
+
+      <div class="mid">
+        <h2 class="headline">Cámaras + WiFi +<br><em>prueba de rondas</em></h2>
+        <div class="features">
+          <div class="feat"><strong>📹 Instalo</strong>Cámaras WiFi, NVR, DVR en su sitio</div>
+          <div class="feat"><strong>📶 Conecto</strong>Red WiFi e internet donde lo necesite</div>
+          <div class="feat"><strong>📱 Activo</strong>QR, GPS, alertas y bitácora digital</div>
+          <div class="feat"><strong>📊 Demuestro</strong>Portal para que su cliente vea el servicio</div>
+        </div>
+      </div>
+
+      <div class="bottom">
+        <div class="cta">
+          <div class="wa" id="waLine">WhatsApp 6073-6546</div>
+          <div class="sub">Su guardia cuida el sitio. Excalibu cuida al guardia.</div>
+          <div class="demo">excalibu-sentinel.onrender.com/demo</div>
+        </div>
+        <div class="qr">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https%3A%2F%2Fexcalibu-sentinel.onrender.com%2Fdemo" alt="QR" />
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    fetch("/api/product").then(r => r.json()).then(p => {
+      if (p.company_name) document.getElementById("companyPill").textContent = p.company_name.toUpperCase();
+      if (p.support_display) {
+        const d = p.support_display.replace(/\D/g, "").slice(-8);
+        document.getElementById("waLine").textContent = "WhatsApp " + (d.length >= 8 ? d.slice(0,4) + "-" + d.slice(4) : p.support_display);
+      }
+    }).catch(() => {});
+  </script>
+</body>
+</html>

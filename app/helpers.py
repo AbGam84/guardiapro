@@ -30,6 +30,7 @@ def user_dict(u: User | None) -> dict:
         "badge": u.badge,
         "phone": u.phone,
         "company_id": u.company_id,
+        "client_site_id": u.client_site_id,
     }
 
 
@@ -114,6 +115,10 @@ def shift_dict(db: Session, sh: Shift, *, include_logs: bool = True) -> dict:
         "ended_at": sh.ended_at.isoformat() if sh.ended_at else None,
         "start_note": sh.start_note,
         "end_note": sh.end_note,
+        "start_lat": sh.start_lat,
+        "start_lng": sh.start_lng,
+        "end_lat": sh.end_lat,
+        "end_lng": sh.end_lng,
         "guard": user_dict(guard),
         "site": site_dict(site),
         "log_count": len(logs),

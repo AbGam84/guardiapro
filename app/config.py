@@ -41,8 +41,11 @@ if PUBLIC_BASE_URL and not PUBLIC_BASE_URL.startswith("http"):
 
 PRODUCT_NAME = "Excalibu Sentinel"
 PRODUCT_SHORT = "Excalibu"
+COMPANY_NAME = _env("GUARDIA_COMPANY_NAME", "Excalibu Telecom CR")
+COMPANY_TAGLINE = "Distribuidor e instalador · Cámaras · WiFi · Internet"
 SLOGAN = "Su guardia cuida el sitio. Excalibu cuida al guardia."
 TAGLINE = "Bitácora, QR, GPS, cámaras y reportes · Costa Rica"
-COPYRIGHT = "© Excalibu Sentinel · Costa Rica"
-SUPPORT_WHATSAPP = _env("GUARDIA_SUPPORT", "+50663706546")
+COPYRIGHT = f"© {COMPANY_NAME} · Excalibu Sentinel · Costa Rica"
+SUPPORT_WHATSAPP = _env("GUARDIA_SUPPORT", "+50660736546")
+SUPPORT_WHATSAPP_DISPLAY = _env("GUARDIA_SUPPORT_DISPLAY", "+506 6073-6546")
 SHOW_DEMO_HINTS = _env("GUARDIA_SHOW_DEMO", "0" if IS_PRODUCTION else "1") in {"1", "true", "yes"}

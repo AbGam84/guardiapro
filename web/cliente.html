@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Excalibu Sentinel — portal cliente</title>
+  <link rel="icon" href="/static/favicon.png" type="image/png" />
+  <link rel="stylesheet" href="/static/css/app.css?v=4" />
+</head>
+<body>
+  <div class="shell">
+    <div class="topbar">
+      <div>
+        <h1>Portal cliente</h1>
+        <p class="muted" id="hello">—</p>
+      </div>
+      <button class="btn btn-ghost" id="logout" type="button">Salir</button>
+    </div>
+
+    <div class="panel" style="margin-bottom:12px">
+      <span class="badge open">SOLO LECTURA</span>
+      <h2 id="siteName" style="margin:8px 0 4px;font-size:1.1rem">—</h2>
+      <p class="muted" id="siteAddr">—</p>
+      <p class="muted" style="font-size:.85rem;margin-top:8px">Prueba de servicio: turnos, rondas QR y reportes de su sitio custodiado.</p>
+    </div>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="panel" style="margin-top:16px">
+      <h2>Turnos recientes</h2>
+      <table class="table" id="shiftTable">
+        <thead><tr><th>Oficial</th><th>Inicio</th><th>Fin</th><th>Estado</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="panel" style="margin-top:16px">
+      <h2>Incidentes reportados</h2>
+      <div id="incidents" class="log-list"></div>
+    </div>
+
+    <div class="panel" style="margin-top:16px">
+      <h2>Alertas de ronda (empresa de seguridad)</h2>
+      <p class="muted" style="font-size:.85rem">Si el guardia no marcó a la hora programada, queda registrado aquí.</p>
+      <div id="missedAlerts"></div>
+    </div>
+
+    <div id="detail" class="panel hidden" style="margin-top:16px">
+      <h2>Detalle del turno</h2>
+      <p class="muted" id="detailTitle"></p>
+      <a class="btn btn-primary" id="pdfLink" target="_blank">Imprimir / PDF</a>
+      <div class="log-list" id="detailLogs" style="margin-top:12px"></div>
+    </div>
+  </div>
+  <script src="/static/js/api.js"></script>
+  <script>
+    document.getElementById("logout").onclick = () => { setToken(""); location.href = "/login"; };
+
+    async function init() {
+      const d = await api("/api/client/dashboard");
+      document.getElementById("hello").textContent = `${d.company?.name || ""} · ${d.site?.client_name || d.user?.name || "Cliente"}`;
+      document.getElementById("siteName").textContent = d.site?.name || "—";
+      document.getElementById("siteAddr").textContent = d.site?.address || "";
+      const ps = d.patrol_summary || {};
+      document.getElementById("stats").innerHTML = `
+        <div class="stat"><span class="muted">Turnos (7 días)</span><b>${ps.shift_count || 0}</b></div>
+        <div class="stat"><span class="muted">Marcas QR</span><b>${(ps.guards || []).reduce((a,g)=>a+(g.checkpoint_marks||0),0)}</b></div>
+        <div class="stat"><span class="muted">Recorrido</span><b>${ps.total_distance_label || "0 m"}</b></div>
+        <div class="stat"><span class="muted">Incidentes</span><b>${(d.recent_incidents || []).length}</b></div>`;
+
+      const tbody = document.querySelector("#shiftTable tbody");
+      tbody.innerHTML = (d.shifts || []).map(s => `<tr>
+        <td>${s.guard?.name || "—"}<br><span class="muted">${s.guard?.badge || ""}</span></td>
+        <td>${fmt(s.started_at)}</td><td>${fmt(s.ended_at)}</td>
+        <td><span class="badge ${s.status}">${s.status}</span></td>
+        <td><button class="btn btn-ghost" data-id="${s.id}">Ver</button></td>
+      </tr>`).join("") || "<tr><td colspan='5' class='muted'>Sin turnos registrados</td></tr>";
+
+      tbody.querySelectorAll("button[data-id]").forEach(btn => {
+        btn.onclick = async () => {
+          const sh = (await api(`/api/shifts/${btn.dataset.id}`)).shift;
+          document.getElementById("detail").classList.remove("hidden");
+          document.getElementById("detailTitle").textContent = `${sh.guard?.name} · ${fmt(sh.started_at)}`;
+          document.getElementById("pdfLink").href = `/api/shifts/${sh.id}/report`;
+          document.getElementById("detailLogs").innerHTML = (sh.logs || []).map(l =>
+            `<div class="log-item ${l.entry_type}"><div class="log-meta">${fmt(l.created_at)} · ${l.entry_label}</div>${l.note}${l.photo_url ? `<br><img src="${l.photo_url}" style="max-width:240px;margin-top:6px;border-radius:8px">` : ""}</div>`
+          ).join("");
+          document.getElementById("detail").scrollIntoView({ behavior: "smooth" });
+        };
+      });
+
+      document.getElementById("incidents").innerHTML = (d.recent_incidents || []).map(l =>
+        `<div class="log-item incidente"><div class="log-meta">${fmt(l.created_at)} · ${l.severity_label}</div>${l.note}${l.photo_url ? `<br><img src="${l.photo_url}" style="max-width:240px;margin-top:6px;border-radius:8px">` : ""}</div>`
+      ).join("") || "<p class='muted'>Sin incidentes en el período</p>";
+
+      document.getElementById("missedAlerts").innerHTML = (d.missed_alerts || []).map(a =>
+        `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
+          <span class="badge ${a.status === 'pending' ? 'open' : ''}">${a.status}</span>
+          <strong style="display:block;margin-top:6px">${a.expected_time} · ${fmt(a.created_at)}</strong>
+          <span class="muted">${a.message.replace(/\n/g, '<br>')}</span>
+        </div>`
+      ).join("") || "<p class='muted'>Sin alertas de ronda pendientes</p>";
+    }
+
+    init().catch(() => { setToken(""); location.href = "/login?next=/cliente"; });
+  </script>
+</body>
+</html>

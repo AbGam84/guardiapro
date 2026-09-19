@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Panfleto — Excalibu Telecom CR</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root { --bg:#050c14; --gold:#ffb020; --teal:#12c4a0; --text:#f7fbff; --muted:#8fa3bf; --border:#243044; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:"Outfit","Segoe UI",sans-serif; background:#222; min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:12px; gap:12px; }
+    .toolbar { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+    .toolbar button, .toolbar a { background:var(--teal); color:#050c14; border:none; padding:10px 16px; border-radius:10px; font-weight:700; cursor:pointer; text-decoration:none; font-size:.85rem; }
+    .hint { color:#aaa; font-size:.78rem; text-align:center; max-width:340px; line-height:1.4; }
+    .panfleto-wrap { width:min(1080px,100vw); aspect-ratio:4/5; }
+    .panfleto { width:100%; height:100%; background:linear-gradient(165deg,#0c1624 0%,var(--bg) 42%,#0a1420 100%); padding:5.5% 6%; display:flex; flex-direction:column; position:relative; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.55); }
+    .head { display:flex; align-items:center; gap:4%; position:relative; z-index:1; padding-bottom:3.5%; border-bottom:2px solid rgba(18,196,160,.35); }
+    .head img { width:16%; min-width:56px; border-radius:18%; }
+    .head-text h1 { font-size:clamp(1.15rem,4.2vw,1.85rem); font-weight:800; line-height:1.1; }
+    .head-text h1 span { color:var(--teal); }
+    .company { font-size:clamp(.55rem,2vw,.72rem); font-weight:700; color:var(--gold); text-transform:uppercase; letter-spacing:.05em; margin-top:4px; }
+    .title { position:relative; z-index:1; font-size:clamp(1.25rem,4.8vw,2rem); font-weight:800; line-height:1.15; margin:4% 0 3%; text-align:center; }
+    .title em { color:var(--gold); font-style:normal; }
+    .offers { position:relative; z-index:1; flex:1; display:grid; grid-template-columns:1fr 1fr; gap:2.5%; }
+    .offer { background:rgba(255,255,255,.04); border:1px solid var(--border); border-radius:12px; padding:3% 3.5%; }
+    .offer .icon { font-size:clamp(1.1rem,3.5vw,1.5rem); margin-bottom:4px; }
+    .offer h3 { font-size:clamp(.62rem,2.2vw,.82rem); color:var(--teal); font-weight:800; text-transform:uppercase; letter-spacing:.04em; margin-bottom:3px; }
+    .offer p { font-size:clamp(.58rem,2vw,.75rem); color:#dce8f8; line-height:1.35; }
+    .software { position:relative; z-index:1; margin:3% 0; padding:3% 4%; border-radius:12px; background:linear-gradient(135deg,rgba(18,196,160,.12),rgba(255,176,32,.08)); border:1px solid rgba(18,196,160,.35); text-align:center; }
+    .software strong { display:block; font-size:clamp(.7rem,2.4vw,.9rem); color:var(--gold); margin-bottom:4px; }
+    .software span { font-size:clamp(.58rem,2vw,.72rem); color:var(--muted); line-height:1.4; }
+    .packages { position:relative; z-index:1; display:grid; grid-template-columns:repeat(3,1fr); gap:2%; margin-bottom:3%; }
+    .pkg { text-align:center; padding:2.5% 2%; border-radius:10px; background:rgba(255,255,255,.03); border:1px solid var(--border); font-size:clamp(.5rem,1.7vw,.68rem); line-height:1.3; color:#dce8f8; }
+    .pkg b { display:block; color:var(--gold); font-size:1.05em; margin-bottom:2px; }
+    .pkg.star { border-color:rgba(255,176,32,.45); background:rgba(255,176,32,.07); }
+    .foot { position:relative; z-index:1; display:flex; align-items:center; justify-content:space-between; gap:4%; padding-top:3%; border-top:2px solid rgba(18,196,160,.3); }
+    .foot .wa { font-size:clamp(.95rem,3.5vw,1.45rem); font-weight:800; }
+    .foot .slogan { font-size:clamp(.52rem,1.8vw,.68rem); color:var(--muted); margin-top:4px; line-height:1.35; }
+    .foot .demo { font-size:clamp(.5rem,1.7vw,.65rem); color:var(--gold); font-weight:600; margin-top:4px; }
+    .foot .qr img { width:clamp(56px,16vw,88px); border-radius:8px; background:#fff; padding:4px; }
+    @media print { body { background:white; padding:0; } .toolbar, .hint { display:none !important; } .panfleto-wrap { width:1080px; height:1350px; aspect-ratio:auto; } .panfleto { height:1350px; } }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button type="button" onclick="window.print()">Guardar imagen / PDF</button>
+    <a href="/publicidad-volante">Volante A4</a>
+  </div>
+  <p class="hint">Panfleto 4:5 — captura de pantalla y envíe por WhatsApp como foto</p>
+  <div class="panfleto-wrap">
+    <article class="panfleto">
+      <header class="head">
+        <img src="/static/excalibu-mark.svg" alt="" />
+        <div class="head-text">
+          <h1>Excalibu <span>Sentinel</span></h1>
+          <div class="company">Excalibu Telecom CR · Costa Rica</div>
+        </div>
+      </header>
+      <h2 class="title">Cámaras + WiFi +<br><em>prueba de rondas</em></h2>
+      <div class="offers">
+        <div class="offer"><div class="icon">📹</div><h3>Cámaras</h3><p>WiFi, IP, NVR y DVR. Instalación en su sitio.</p></div>
+        <div class="offer"><div class="icon">📶</div><h3>WiFi e internet</h3><p>Red estable en bodega, condominio o negocio.</p></div>
+        <div class="offer"><div class="icon">📱</div><h3>Rondas QR</h3><p>Guardia escanea en muro. Hora, lugar y GPS.</p></div>
+        <div class="offer"><div class="icon">⏰</div><h3>Alertas</h3><p>Aviso si no cumplieron horario de ronda.</p></div>
+        <div class="offer"><div class="icon">📊</div><h3>Portal cliente</h3><p>Cliente ve turnos — solo lectura.</p></div>
+        <div class="offer"><div class="icon">📄</div><h3>Reportes PDF</h3><p>Bitácora y evidencia para administración.</p></div>
+      </div>
+      <div class="software"><strong>Excalibu Sentinel — audita su operación</strong><span>Su guardia cuida el sitio. Excalibu cuida al guardia.</span></div>
+      <div class="packages">
+        <div class="pkg"><b>Paquete A</b>Cámaras + WiFi</div>
+        <div class="pkg"><b>Paquete B</b>Software rondas</div>
+        <div class="pkg star"><b>Paquete C ★</b>Todo integrado</div>
+      </div>
+      <footer class="foot">
+        <div class="foot-text">
+          <div class="wa">WhatsApp 6073-6546</div>
+          <div class="slogan">Distribuidor · Instalador · Seguridad · Condominios · Bodegas</div>
+          <div class="demo">Demo: excalibu-sentinel.onrender.com/demo</div>
+        </div>
+        <div class="qr"><img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https%3A%2F%2Fexcalibu-sentinel.onrender.com%2Fdemo" alt="QR" /></div>
+      </footer>
+    </article>
+  </div>
+</body>
+</html>
