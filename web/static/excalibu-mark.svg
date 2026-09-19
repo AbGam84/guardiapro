@@ -2,29 +2,35 @@
   <defs>
     <linearGradient id="blade" x1="50%" y1="0%" x2="50%" y2="100%">
       <stop offset="0%" stop-color="#67e8d9"/>
-      <stop offset="50%" stop-color="#12c4a0"/>
+      <stop offset="55%" stop-color="#12c4a0"/>
       <stop offset="100%" stop-color="#0e7490"/>
     </linearGradient>
     <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#ffd166"/>
       <stop offset="100%" stop-color="#ff8c1a"/>
     </linearGradient>
-    <radialGradient id="glow" cx="50%" cy="38%" r="45%">
-      <stop offset="0%" stop-color="#12c4a0" stop-opacity=".28"/>
-      <stop offset="100%" stop-color="#12c4a0" stop-opacity="0"/>
-    </radialGradient>
+    <linearGradient id="shieldFill" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#1a2740"/>
+      <stop offset="100%" stop-color="#0f1724"/>
+    </linearGradient>
   </defs>
   <rect width="512" height="512" rx="108" fill="#0a0f18"/>
-  <circle cx="256" cy="220" r="168" fill="url(#glow)"/>
-  <path d="M256 56 L360 150 L332 188 L256 128 L180 188 L152 150 Z" fill="#141e2e" stroke="url(#gold)" stroke-width="12" stroke-linejoin="round"/>
-  <path d="M118 196 C118 196 148 338 256 420 C364 338 394 196 394 196 L362 182 C362 182 336 306 256 362 C176 306 150 182 150 182 Z" fill="#141e2e" stroke="url(#gold)" stroke-width="12" stroke-linejoin="round"/>
-  <path d="M256 96 L278 188 L256 456 L234 188 Z" fill="url(#blade)"/>
-  <path d="M256 96 L264 168 L256 184 L248 168 Z" fill="#f8fafc" opacity=".9"/>
-  <rect x="224" y="188" width="64" height="36" rx="9" fill="url(#gold)"/>
-  <rect x="208" y="224" width="96" height="20" rx="7" fill="url(#gold)"/>
-  <circle cx="256" cy="242" r="13" fill="#0a0f18" stroke="#ffb020" stroke-width="5"/>
-  <ellipse cx="256" cy="286" rx="52" ry="30" fill="#0a0f18" stroke="#12c4a0" stroke-width="5"/>
-  <circle cx="256" cy="286" r="15" fill="#12c4a0"/>
-  <circle cx="263" cy="279" r="5" fill="#f0fdfa"/>
-  <path d="M214 286 Q256 262 298 286" fill="none" stroke="#5eead4" stroke-width="3.5" stroke-linecap="round"/>
+  <!-- Perímetro / cobertura de ronda -->
+  <circle cx="256" cy="256" r="198" fill="none" stroke="#12c4a0" stroke-width="3" opacity=".22"/>
+  <circle cx="256" cy="256" r="168" fill="none" stroke="#12c4a0" stroke-width="2" opacity=".14" stroke-dasharray="10 14"/>
+  <!-- Escudo principal -->
+  <path d="M256 64 L392 148 L372 320 Q256 448 140 320 L120 148 Z" fill="url(#shieldFill)" stroke="url(#gold)" stroke-width="14" stroke-linejoin="round"/>
+  <path d="M256 92 L352 158 L338 300 Q256 400 174 300 L160 158 Z" fill="none" stroke="#243044" stroke-width="4"/>
+  <!-- Espada Excalibur -->
+  <path d="M256 88 L278 196 L256 432 L234 196 Z" fill="url(#blade)"/>
+  <path d="M256 88 L262 168 L256 182 L250 168 Z" fill="#f8fafc" opacity=".92"/>
+  <rect x="222" y="196" width="68" height="38" rx="10" fill="url(#gold)"/>
+  <rect x="206" y="234" width="100" height="22" rx="8" fill="url(#gold)"/>
+  <circle cx="256" cy="254" r="14" fill="#0a0f18" stroke="#ffb020" stroke-width="5"/>
+  <!-- Candado = control y acceso seguro -->
+  <rect x="228" y="312" width="56" height="44" rx="10" fill="#0a0f18" stroke="#12c4a0" stroke-width="5"/>
+  <path d="M244 312 V292 a12 12 0 0 1 24 0 v20" fill="none" stroke="#12c4a0" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="256" cy="334" r="6" fill="#ffb020"/>
+  <!-- Check = sitio protegido -->
+  <path d="M188 360 L214 386 L248 338" fill="none" stroke="#3dd68c" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
