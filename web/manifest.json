@@ -8,7 +8,8 @@
   "theme_color": "#12c4a0",
   "lang": "es-CR",
   "icons": [
-    { "src": "/static/excalibu-logo.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/static/excalibu-icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/static/excalibu-icon-512.png", "sizes": "512x512", "type": "image/png" },
     { "src": "/static/favicon.png", "sizes": "64x64", "type": "image/png" }
   ]
 }
