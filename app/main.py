@@ -10,12 +10,7 @@ from app.database import Base, engine, get_db
 from app.migrate import ensure_schema
 from app.paths import WEB
 from app.routes import register_routes
-from app.seed import (
-    ensure_admin_access,
-    seed_cameras_if_empty,
-    seed_client_and_schedules_if_missing,
-    seed_if_empty,
-)
+from app.seed import ensure_admin_access, migrate_demo_to_clean, seed_if_empty
 
 
 @asynccontextmanager
@@ -25,9 +20,8 @@ async def lifespan(app: FastAPI):
     db = next(get_db())
     try:
         seed_if_empty(db)
+        migrate_demo_to_clean(db)
         ensure_admin_access(db)
-        seed_cameras_if_empty(db)
-        seed_client_and_schedules_if_missing(db)
     finally:
         db.close()
     yield

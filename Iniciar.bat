@@ -34,9 +34,8 @@ echo   Guardia: http://127.0.0.1:8097/guardia
 echo   Admin:   http://127.0.0.1:8097/admin
 if defined LAN_IP echo   Celular: http://%LAN_IP%:8097/guardia
 echo ----------------------------------------
-echo   admin / Admin2026!
-echo   juan  / Guardia2026!
-echo   cliente / Cliente2026!
+echo   Admin: admin / Admin2026!
+echo   Crear oficiales en Admin - Ajustes
 echo ========================================
 echo Reparando base de datos...
 "%PY%" scripts\repair_db.py

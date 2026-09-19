@@ -1,22 +1,33 @@
 from fastapi.testclient import TestClient
 
+
+
 from app.main import app
 
+
+
 with TestClient(app) as c:
+
     assert c.get("/api/health").json()["ok"]
-    r = c.post("/api/auth/login", json={"username": "juan", "password": "Guardia2026!"})
+
+    assert c.get("/demo", follow_redirects=False).status_code == 307
+
+    r = c.post("/api/auth/login", json={"username": "admin", "password": "Admin2026!"})
+
     assert r.status_code == 200, r.text
-    h = {"Authorization": "Bearer " + r.json()["access_token"]}
-    s = c.post("/api/shifts/start", json={"site_id": 1, "note": "Turno"}, headers=h).json()["shift"]
-    c.post(f"/api/shifts/{s['id']}/log", json={"entry_type": "incidente", "note": "Test", "severity": "critica"}, headers=h)
-    ad = c.post("/api/auth/login", json={"username": "admin", "password": "Admin2026!"})
-    ah = {"Authorization": "Bearer " + ad.json()["access_token"]}
+
+    ah = {"Authorization": "Bearer " + r.json()["access_token"]}
+
     d = c.get("/api/dashboard", headers=ah).json()
+
+    assert d["guards"] == 0
+
+    assert d["sites"] == 0
+
     vl = c.post("/api/vendor/login", json={"username": "vendor", "password": "GuardiaVendor2026"})
-    vh = {"Authorization": "Bearer " + vl.json()["access_token"]}
-    co = c.post(
-        "/api/vendor/companies",
-        json={"name": "Seguridad Test", "admin_username": "testadmin", "admin_password": "Test2026!"},
-        headers=vh,
-    )
-    print("OK", d["open_shifts"], co.json()["company"]["code"])
+
+    assert vl.status_code == 200, vl.text
+
+    print("OK — producción limpia, admin operativo")
+
+

@@ -62,8 +62,8 @@ def page_vendor():
 
 
 @router.get("/demo")
-def page_demo():
-    return _html("demo.html")
+def page_demo_legacy():
+    return RedirectResponse("/login", status_code=307)
 
 
 @router.get("/cameras/{camera_id}")

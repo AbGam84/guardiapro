@@ -7,8 +7,7 @@ Doble clic en **`Iniciar.bat`** (raíz del proyecto).
 | Rol | Usuario | Clave |
 |-----|---------|-------|
 | Admin | admin | Admin2026! |
-| Oficial | juan | Guardia2026! |
-| Cliente (portal) | cliente | Cliente2026! |
+| Oficial | *(crear en Admin → Ajustes)* | — |
 | Vendor | vendor | GuardiaVendor2026 |
 
 URLs locales: http://127.0.0.1:8097/login · `/guardia` · `/admin` · `/cliente`
