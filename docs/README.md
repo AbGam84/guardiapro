@@ -6,7 +6,7 @@ Doble clic en **`Iniciar.bat`** (raíz del proyecto).
 
 | Rol | Usuario | Clave | Panel |
 |-----|---------|-------|-------|
-| Comercial (Excalibu) | vendor | GuardiaVendor2026 | `/comercial` |
+| Comercial (Excalibu) | vendor | GuardiaVendor2026! | `/comercial` |
 | Admin cliente | admin | Admin2026! | `/admin` |
 | Oficial | código 6 dígitos | — | `/oficial` |
 

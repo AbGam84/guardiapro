@@ -27,7 +27,7 @@ Doble clic: **`Iniciar.bat`** → http://127.0.0.1:8097/login
 | Admin | admin | Admin2026! |
 | Oficial | juan | Guardia2026! |
 | Cliente | cliente | Cliente2026! |
-| Vendor | vendor | GuardiaVendor2026 |
+| Comercial | vendor | GuardiaVendor2026! |
 
 ## Estructura
 

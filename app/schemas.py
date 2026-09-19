@@ -15,6 +15,9 @@ class LogEntryIn(BaseModel):
     entry_type: str
     note: str = ""
     severity: str = "normal"
+    sector: str = ""
+    involved: str = ""
+    action_taken: str = ""
     checkpoint_id: int | None = None
     lat: float | None = None
     lng: float | None = None

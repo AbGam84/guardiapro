@@ -1,21 +1,34 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Excalibu Sentinel">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 320" role="img" aria-label="Excalibu Sentinel">
   <defs>
-    <linearGradient id="blade" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="gold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffd166"/>
+      <stop offset="100%" stop-color="#ff8c1a"/>
+    </linearGradient>
+    <linearGradient id="teal" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" stop-color="#12c4a0"/>
       <stop offset="100%" stop-color="#3eb5e0"/>
     </linearGradient>
-    <linearGradient id="gold" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#ffb020"/>
-      <stop offset="100%" stop-color="#ff8c1a"/>
-    </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="96" fill="#0a0f18"/>
-  <path d="M256 72 L296 200 L256 440 L216 200 Z" fill="url(#blade)" opacity=".95"/>
-  <rect x="232" y="200" width="48" height="28" rx="6" fill="url(#gold)"/>
-  <rect x="220" y="228" width="72" height="16" rx="4" fill="url(#gold)"/>
-  <circle cx="256" cy="248" r="10" fill="#0a0f18" stroke="#ffb020" stroke-width="4"/>
-  <path d="M150 320 Q256 260 362 320 L340 360 Q256 310 172 360 Z" fill="#121a28" stroke="#243044" stroke-width="6"/>
-  <path d="M190 338 L256 300 L322 338" fill="none" stroke="#12c4a0" stroke-width="5" stroke-linecap="round"/>
-  <text x="256" y="410" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="52" font-weight="700" fill="#eef4ff">Excalibu</text>
-  <text x="256" y="452" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="22" letter-spacing="6" fill="#12c4a0">SENTINEL</text>
+
+  <!-- Mark embebido (escala reducida) -->
+  <g transform="translate(8 8) scale(0.58)">
+    <rect width="512" height="512" rx="108" fill="#0a0f18"/>
+    <circle cx="256" cy="268" r="168" fill="none" stroke="#12c4a0" stroke-width="2" opacity=".15" stroke-dasharray="8 12"/>
+    <path d="M256 56 L404 148 L384 332 Q256 468 128 332 L108 148 Z" fill="#121a28" stroke="url(#gold)" stroke-width="16" stroke-linejoin="round"/>
+    <g transform="translate(256 248)">
+      <path d="M-78 52 Q-78 8 -44 -6 L44 -6 Q78 8 78 52 L62 118 L-62 118 Z" fill="#12c4a0"/>
+      <ellipse cx="0" cy="-52" rx="30" ry="32" fill="#d4b896"/>
+      <path d="M-38 -62 L38 -62 L34 -88 L-34 -88 Z" fill="#1e293b"/>
+      <ellipse cx="0" cy="-62" rx="42" ry="10" fill="#334155"/>
+      <rect x="-22" y="18" width="44" height="34" rx="6" fill="url(#gold)"/>
+    </g>
+    <circle cx="392" cy="392" r="36" fill="#0a0f18" stroke="#12c4a0" stroke-width="4"/>
+    <path d="M376 392 L388 404 L412 378" fill="none" stroke="#3dd68c" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Texto marca -->
+  <text x="320" y="132" font-family="Outfit, Segoe UI, Arial, sans-serif" font-size="72" font-weight="800" fill="#eef4ff" letter-spacing="-1">Excalibu</text>
+  <text x="322" y="182" font-family="Outfit, Segoe UI, Arial, sans-serif" font-size="28" font-weight="700" fill="url(#teal)" letter-spacing="8">SENTINEL</text>
+  <text x="322" y="228" font-family="Outfit, Segoe UI, Arial, sans-serif" font-size="20" font-weight="600" fill="#8fa3bf" letter-spacing=".5">Bitácora · Rondas QR · GPS · Cámaras</text>
+  <rect x="322" y="248" width="280" height="4" rx="2" fill="url(#gold)" opacity=".85"/>
 </svg>

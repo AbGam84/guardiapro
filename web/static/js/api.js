@@ -35,5 +35,9 @@ const ENTRY_LABELS = {
   checkpoint: "Punto de control",
   incidente: "Incidente",
   novedad: "Novedad",
+  visita: "Visita / ingreso",
+  vehiculo: "Vehículo",
+  llaves: "Llaves / acceso",
+  entrega: "Entrega de turno",
   fin: "Fin de turno",
 };

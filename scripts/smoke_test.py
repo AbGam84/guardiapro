@@ -24,7 +24,7 @@ with TestClient(app) as c:
 
     assert d["sites"] == 0
 
-    vl = c.post("/api/vendor/login", json={"username": "vendor", "password": "GuardiaVendor2026"})
+    vl = c.post("/api/vendor/login", json={"username": "vendor", "password": "GuardiaVendor2026!"})
 
     assert vl.status_code == 200, vl.text
 

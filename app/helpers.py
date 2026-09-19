@@ -9,6 +9,10 @@ ENTRY_LABELS = {
     "checkpoint": "Punto de control",
     "incidente": "Incidente",
     "novedad": "Novedad",
+    "visita": "Visita / ingreso",
+    "vehiculo": "Vehículo",
+    "llaves": "Llaves / acceso",
+    "entrega": "Entrega de turno",
     "fin": "Fin de turno",
 }
 
@@ -88,6 +92,9 @@ def log_dict(e: LogEntry) -> dict:
         "entry_label": ENTRY_LABELS.get(e.entry_type, e.entry_type),
         "severity": e.severity,
         "severity_label": SEVERITY_LABELS.get(e.severity, e.severity),
+        "sector": e.sector or "",
+        "involved": e.involved or "",
+        "action_taken": e.action_taken or "",
         "note": e.note,
         "lat": e.lat,
         "lng": e.lng,

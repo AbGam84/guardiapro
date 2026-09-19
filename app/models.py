@@ -180,6 +180,9 @@ class LogEntry(Base):
     checkpoint_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("patrol_checkpoints.id"), nullable=True)
     entry_type: Mapped[str] = mapped_column(String(40), index=True)
     severity: Mapped[str] = mapped_column(String(20), default="normal")  # normal | alta | critica
+    sector: Mapped[str] = mapped_column(String(120), default="")
+    involved: Mapped[str] = mapped_column(String(255), default="")
+    action_taken: Mapped[str] = mapped_column(Text, default="")
     note: Mapped[str] = mapped_column(Text, default="")
     photo_filename: Mapped[str] = mapped_column(String(255), default="")
     lat: Mapped[float | None] = mapped_column(Float, nullable=True)

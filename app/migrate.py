@@ -60,3 +60,13 @@ def ensure_schema(engine: Engine) -> None:
                         conn.execute(text(f"ALTER TABLE shifts ADD COLUMN {col} FLOAT"))
                     else:
                         conn.execute(text(f"ALTER TABLE shifts ADD COLUMN {col} DOUBLE PRECISION"))
+
+    if "log_entries" in tables:
+        cols = {c["name"] for c in insp.get_columns("log_entries")}
+        with engine.begin() as conn:
+            if "sector" not in cols:
+                conn.execute(text("ALTER TABLE log_entries ADD COLUMN sector VARCHAR(120) DEFAULT ''"))
+            if "involved" not in cols:
+                conn.execute(text("ALTER TABLE log_entries ADD COLUMN involved VARCHAR(255) DEFAULT ''"))
+            if "action_taken" not in cols:
+                conn.execute(text("ALTER TABLE log_entries ADD COLUMN action_taken TEXT DEFAULT ''"))

@@ -7,7 +7,7 @@
   <link rel="manifest" href="/manifest.json" />
   <title>Excalibu Sentinel — bitácora oficial</title>
   <link rel="icon" href="/static/favicon.png" type="image/png" />
-  <link rel="stylesheet" href="/static/css/app.css?v=3" />
+  <link rel="stylesheet" href="/static/css/app.css?v=6" />
 </head>
 <body>
   <div class="shell">
@@ -28,8 +28,10 @@
       <h2 style="margin:0 0 8px;font-size:1.1rem">Iniciar turno</h2>
       <form id="startForm" class="form-grid">
         <label>Sitio<select name="site_id" id="siteSelect" required></select></label>
-        <label>Nota de inicio<textarea name="note" placeholder="Relevo, estado del sitio"></textarea></label>
-        <button class="btn btn-primary btn-block" type="submit">Iniciar turno</button>
+        <label>Estado del sitio al recibir<textarea name="site_state" placeholder="Puertas, alarmas, iluminación, novedades del turno anterior"></textarea></label>
+        <label>Llaves / equipos recibidos<input name="keys_received" placeholder="Ej. llave portón, control acceso, radio" /></label>
+        <label>Observaciones de inicio<textarea name="note" placeholder="Relevo, nombre quien entrega, hora"></textarea></label>
+        <button class="btn btn-primary btn-block" type="submit">Iniciar turno y abrir bitácora</button>
       </form>
       <p id="startErr" class="error hidden"></p>
     </div>
@@ -65,11 +67,22 @@
         <div id="checkpointList" class="chips"></div>
       </div>
 
-      <div class="panel" style="margin-bottom:12px">
-        <h2 style="margin:0 0 8px;font-size:1rem">Reportar</h2>
-        <div class="chips" id="typeChips"></div>
+      <div class="panel" style="margin-bottom:12px;border-color:rgba(18,196,160,.35)">
+        <h2 style="margin:0 0 4px;font-size:1.05rem">Bitácora digital</h2>
+        <p class="muted" style="margin:0 0 12px;font-size:.85rem">Complete desde el celular — queda guardado con hora y GPS.</p>
         <form id="logForm" class="form-grid">
-          <input type="hidden" name="entry_type" id="entryType" value="ronda" />
+          <label>Tipo de registro
+            <select name="entry_type" id="entryType">
+              <option value="ronda">Ronda / patrullaje</option>
+              <option value="novedad">Novedad</option>
+              <option value="incidente">Incidente</option>
+              <option value="visita">Visita / ingreso</option>
+              <option value="vehiculo">Vehículo</option>
+              <option value="llaves">Llaves / acceso</option>
+              <option value="checkpoint">Punto de control</option>
+              <option value="entrega">Entrega de turno</option>
+            </select>
+          </label>
           <label>Prioridad
             <select name="severity" id="severity">
               <option value="normal">Normal</option>
@@ -77,20 +90,16 @@
               <option value="critica">Crítica</option>
             </select>
           </label>
-          <label>Detalle<textarea name="note" required placeholder="Sector, hora, acción"></textarea></label>
-          <button class="btn btn-ok btn-block" type="submit">Registrar en bitácora</button>
+          <label>Sector / ubicación<input name="sector" placeholder="Ej. portón principal, bodega 2, piso 3" /></label>
+          <label>Punto de ronda (opcional)<select name="checkpoint_id" id="logCheckpoint"><option value="">— Ninguno —</option></select></label>
+          <label>Lo observado / descripción<textarea name="note" required rows="3" placeholder="Qué vio, a qué hora aprox., estado del lugar"></textarea></label>
+          <label>Persona o vehículo involucrado<input name="involved" placeholder="Nombre visitante, placa, empresa, cédula" /></label>
+          <label>Acción tomada<textarea name="action_taken" rows="2" placeholder="Ej. se avisó supervisor, se cerró portón, se llamó 911"></textarea></label>
+          <label>Foto evidencia (opcional)<input name="photo" type="file" accept="image/*" capture="environment" /></label>
+          <button class="btn btn-ok btn-block" type="submit">Guardar en bitácora digital</button>
         </form>
         <p id="logErr" class="error hidden"></p>
         <a id="waAlert" class="btn btn-primary btn-block hidden" style="margin-top:10px;text-align:center;text-decoration:none" target="_blank">Avisar supervisor WhatsApp</a>
-      </div>
-
-      <div class="panel" style="margin-bottom:12px">
-        <h2 style="margin:0 0 8px;font-size:1rem">Foto incidente</h2>
-        <form id="photoForm" class="form-grid">
-          <label>Foto<input name="photo" type="file" accept="image/*" capture="environment" required /></label>
-          <label>Detalle<textarea name="note" placeholder="Descripción del incidente"></textarea></label>
-          <button class="btn btn-ghost btn-block" type="submit">Subir foto + incidente</button>
-        </form>
       </div>
 
       <div class="panel" style="margin-bottom:12px">
@@ -114,7 +123,17 @@
     let checkpoints = [];
     let qrScanner = null;
     let qrActive = false;
-    const types = ["ronda", "checkpoint", "incidente", "novedad"];
+    function esc(s) { return (s || "").replace(/</g, "&lt;"); }
+
+    function logDetailHtml(l) {
+      let h = "";
+      if (l.sector) h += `<div><strong>Sector:</strong> ${esc(l.sector)}</div>`;
+      if (l.note) h += `<div><strong>Descripción:</strong> ${esc(l.note)}</div>`;
+      if (l.involved) h += `<div><strong>Involucrado:</strong> ${esc(l.involved)}</div>`;
+      if (l.action_taken) h += `<div><strong>Acción:</strong> ${esc(l.action_taken)}</div>`;
+      if (!h) h = esc(l.note);
+      return h;
+    }
 
     async function getGps() {
       try {
@@ -203,7 +222,7 @@
       box.innerHTML = logs.map(l => `
         <div class="log-item ${l.entry_type} ${l.severity === 'critica' ? 'critica' : ''}">
           <div class="log-meta">${fmt(l.created_at)} · ${l.entry_label || l.entry_type} · ${l.severity_label || ''}</div>
-          <div>${(l.note || "").replace(/</g,"&lt;")}</div>
+          <div>${logDetailHtml(l)}</div>
           ${l.photo_url ? `<img src="${l.photo_url}" style="max-width:100%;margin-top:8px;border-radius:8px" />` : ""}
         </div>`).join("");
     }
@@ -238,6 +257,11 @@
       box.innerHTML = checkpoints.map(cp =>
         `<button type="button" class="chip" data-cp="${cp.id}">${cp.name}</button>`
       ).join("");
+      const logCp = document.getElementById("logCheckpoint");
+      if (logCp) {
+        logCp.innerHTML = '<option value="">— Ninguno —</option>' +
+          checkpoints.map(cp => `<option value="${cp.id}">${cp.name}</option>`).join("");
+      }
       box.querySelectorAll(".chip").forEach(btn => {
         btn.onclick = async () => {
           if (!shift) return;
@@ -275,17 +299,10 @@
       loadPatrolStats();
     }
 
-    document.getElementById("typeChips").innerHTML = types.map((t,i) =>
-      `<button type="button" class="chip${i===0?' active':''}" data-type="${t}">${ENTRY_LABELS[t]}</button>`
-    ).join("");
-    document.getElementById("typeChips").querySelectorAll(".chip").forEach(btn => {
-      btn.onclick = () => {
-        document.querySelectorAll("#typeChips .chip").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        document.getElementById("entryType").value = btn.dataset.type;
-        document.getElementById("severity").value = btn.dataset.type === "incidente" ? "alta" : "normal";
-      };
-    });
+    document.getElementById("entryType").onchange = (e) => {
+      const t = e.target.value;
+      document.getElementById("severity").value = t === "incidente" ? "alta" : "normal";
+    };
 
     async function init() {
       const me = await api("/api/auth/me");
@@ -308,11 +325,15 @@
       const fd = new FormData(e.target);
       const gps = await getGps();
       try {
+        const parts = [];
+        if (fd.get("site_state")) parts.push("Estado sitio: " + fd.get("site_state"));
+        if (fd.get("keys_received")) parts.push("Llaves/equipos: " + fd.get("keys_received"));
+        if (fd.get("note")) parts.push(String(fd.get("note")));
         const d = await apiWithOffline("/api/shifts/start", {
           method: "POST",
           body: JSON.stringify({
             site_id: Number(fd.get("site_id")),
-            note: fd.get("note") || "",
+            note: parts.join(" · ") || "",
             lat: gps.lat,
             lng: gps.lng,
           }),
@@ -333,22 +354,42 @@
       const fd = new FormData(e.target);
       const gps = await getGps();
       const lat = gps.lat, lng = gps.lng;
+      const cp = fd.get("checkpoint_id");
+      const payload = {
+        entry_type: fd.get("entry_type"),
+        severity: fd.get("severity"),
+        sector: fd.get("sector") || "",
+        involved: fd.get("involved") || "",
+        action_taken: fd.get("action_taken") || "",
+        note: fd.get("note"),
+        checkpoint_id: cp ? Number(cp) : null,
+        lat, lng,
+      };
+      const photo = fd.get("photo");
       try {
-        const d = await apiWithOffline(`/api/shifts/${shift.id}/log`, {
-          method: "POST",
-          body: JSON.stringify({
-            entry_type: fd.get("entry_type"),
-            severity: fd.get("severity"),
-            note: fd.get("note"),
-            lat, lng,
-          }),
-        });
-        if (d.queued) { e.target.reset(); flashQr("Sin red — reporte en cola", true); return; }
-        const wa = document.getElementById("waAlert");
-        if (d.alert?.whatsapp_url) {
-          wa.href = d.alert.whatsapp_url;
-          wa.classList.remove("hidden");
-        } else wa.classList.add("hidden");
+        if (photo && photo.size > 0) {
+          const body = new FormData();
+          Object.entries(payload).forEach(([k, v]) => { if (v != null && v !== "") body.append(k, v); });
+          body.append("photo", photo);
+          const r = await fetch(`/api/shifts/${shift.id}/log/photo`, {
+            method: "POST",
+            headers: { Authorization: "Bearer " + getToken() },
+            body,
+          });
+          const data = await r.json();
+          if (!r.ok) throw new Error(data.detail || "Error al guardar");
+        } else {
+          const d = await apiWithOffline(`/api/shifts/${shift.id}/log`, {
+            method: "POST",
+            body: JSON.stringify(payload),
+          });
+          if (d.queued) { e.target.reset(); flashQr("Sin red — bitácora en cola", true); return; }
+          const wa = document.getElementById("waAlert");
+          if (d.alert?.whatsapp_url) {
+            wa.href = d.alert.whatsapp_url;
+            wa.classList.remove("hidden");
+          } else wa.classList.add("hidden");
+        }
         e.target.reset();
         document.getElementById("entryType").value = "ronda";
         showShift((await api(`/api/shifts/${shift.id}`)).shift);
@@ -356,20 +397,6 @@
         const el = document.getElementById("logErr");
         el.textContent = ex.message; el.classList.remove("hidden");
       }
-    };
-
-    document.getElementById("photoForm").onsubmit = async (e) => {
-      e.preventDefault();
-      if (!shift) return;
-      const fd = new FormData(e.target);
-      fd.append("entry_type", "incidente");
-      fd.append("severity", "alta");
-      const headers = { Authorization: "Bearer " + getToken() };
-      const r = await fetch(`/api/shifts/${shift.id}/log/photo`, { method: "POST", headers, body: fd });
-      const data = await r.json();
-      if (!r.ok) { alert(data.detail || "Error"); return; }
-      e.target.reset();
-      showShift((await api(`/api/shifts/${shift.id}`)).shift);
     };
 
     document.getElementById("endForm").onsubmit = async (e) => {

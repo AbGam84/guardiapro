@@ -86,7 +86,7 @@ def health():
         "slogan": SLOGAN,
         "tagline": TAGLINE,
         "production": IS_PRODUCTION,
-        "build": "20260925",
+        "build": "20260927",
     }
 
 
@@ -737,6 +737,9 @@ def add_log(
         checkpoint_id=payload.checkpoint_id,
         entry_type=et,
         severity=sev,
+        sector=(payload.sector or "").strip(),
+        involved=(payload.involved or "").strip(),
+        action_taken=(payload.action_taken or "").strip(),
         note=(payload.note or "").strip(),
         lat=payload.lat,
         lng=payload.lng,
@@ -767,6 +770,9 @@ async def add_log_photo(
     entry_type: str = Form("incidente"),
     note: str = Form(""),
     severity: str = Form("alta"),
+    sector: str = Form(""),
+    involved: str = Form(""),
+    action_taken: str = Form(""),
     checkpoint_id: int | None = Form(None),
     lat: float | None = Form(None),
     lng: float | None = Form(None),
@@ -795,6 +801,9 @@ async def add_log_photo(
         checkpoint_id=checkpoint_id,
         entry_type=(entry_type or "incidente").lower(),
         severity=(severity or "alta").lower(),
+        sector=(sector or "").strip(),
+        involved=(involved or "").strip(),
+        action_taken=(action_taken or "").strip(),
         note=(note or "Foto adjunta").strip(),
         photo_filename=fname,
         lat=lat,

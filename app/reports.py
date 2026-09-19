@@ -20,12 +20,22 @@ def shift_report_html(db: Session, shift_id: int, company_id: int) -> str:
         photo = ""
         if log.get("photo_url"):
             photo = f'<br><img src="{escape(log["photo_url"])}" style="max-width:280px;margin-top:8px;border-radius:8px" />'
+        detail_parts = []
+        if log.get("sector"):
+            detail_parts.append(f"<strong>Sector:</strong> {escape(log['sector'])}")
+        if log.get("note"):
+            detail_parts.append(f"<strong>Descripción:</strong> {escape(log['note'])}")
+        if log.get("involved"):
+            detail_parts.append(f"<strong>Involucrado:</strong> {escape(log['involved'])}")
+        if log.get("action_taken"):
+            detail_parts.append(f"<strong>Acción:</strong> {escape(log['action_taken'])}")
+        detail = "<br>".join(detail_parts) or escape(log.get("note") or "")
         rows += f"""
         <tr>
           <td>{escape(log.get("created_at") or "")}</td>
           <td>{escape(log.get("entry_label") or "")}</td>
           <td>{escape(sev)}</td>
-          <td>{escape(log.get("note") or "")}{photo}</td>
+          <td>{detail}{photo}</td>
         </tr>"""
     guard = data.get("guard") or {}
     site = data.get("site") or {}
