@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#12c4a0" />
+  <title>Excalibu Sentinel — oficial</title>
+  <link rel="icon" href="/static/favicon.png" type="image/png" />
+  <link rel="stylesheet" href="/static/css/app.css?v=5" />
+  <link rel="manifest" href="/manifest.json" />
+</head>
+<body>
+  <div class="login-wrap panel" style="max-width:400px;margin:6vh auto">
+    <div class="brand-head" style="justify-content:center">
+      <img src="/static/excalibu-mark.png?v=4" alt="" class="brand-logo" width="88" height="88" />
+    </div>
+    <h1 style="text-align:center;font-size:1.35rem">Acceso oficial</h1>
+    <p class="muted" style="text-align:center;margin:0 0 16px">Código de 6 dígitos — solo este celular, solo su turno.</p>
+    <form id="codeForm" class="form-grid">
+      <label>Código del oficial
+        <input name="field_code" id="fieldCode" inputmode="numeric" pattern="[0-9]*" maxlength="6" required placeholder="123456" autocomplete="off" style="font-size:1.5rem;letter-spacing:.2em;text-align:center" />
+      </label>
+      <button class="btn btn-primary btn-block" type="submit">Entrar a bitácora</button>
+    </form>
+    <p id="err" class="error hidden"></p>
+    <p class="muted" style="margin-top:16px;font-size:.78rem;text-align:center">
+      El código lo entrega administración.<br>
+      <a href="/login">Entrada admin / supervisor</a>
+    </p>
+  </div>
+  <script src="/static/js/api.js"></script>
+  <script>
+    async function loginWithCode(code) {
+      const data = await api("/api/auth/login-code", {
+        method: "POST",
+        body: JSON.stringify({ field_code: code }),
+      });
+      setToken(data.access_token);
+      location.href = "/guardia";
+    }
+
+    const params = new URLSearchParams(location.search);
+    const pre = (params.get("code") || "").replace(/\D/g, "");
+    if (pre.length >= 4) {
+      document.getElementById("fieldCode").value = pre;
+      loginWithCode(pre).catch(ex => {
+        document.getElementById("err").textContent = ex.message;
+        document.getElementById("err").classList.remove("hidden");
+      });
+    }
+
+    document.getElementById("codeForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const err = document.getElementById("err");
+      err.classList.add("hidden");
+      const code = (new FormData(e.target).get("field_code") || "").toString().replace(/\D/g, "");
+      try {
+        await loginWithCode(code);
+      } catch (ex) {
+        err.textContent = ex.message;
+        err.classList.remove("hidden");
+      }
+    };
+  </script>
+</body>
+</html>

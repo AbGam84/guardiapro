@@ -7,6 +7,10 @@ class LoginIn(BaseModel):
     company_code: str = ""
 
 
+class FieldCodeLoginIn(BaseModel):
+    field_code: str = Field(min_length=4, max_length=12)
+
+
 class LogEntryIn(BaseModel):
     entry_type: str
     note: str = ""

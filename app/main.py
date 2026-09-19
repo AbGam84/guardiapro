@@ -10,6 +10,8 @@ from app.database import Base, engine, get_db
 from app.migrate import ensure_schema
 from app.paths import WEB
 from app.routes import register_routes
+from app.field_codes import generate_field_code
+from app.models import User
 from app.seed import ensure_admin_access, migrate_demo_to_clean, purge_demo_cameras, seed_if_empty
 
 
@@ -23,6 +25,15 @@ async def lifespan(app: FastAPI):
         migrate_demo_to_clean(db)
         purge_demo_cameras(db)
         ensure_admin_access(db)
+        guards_no_code = (
+            db.query(User)
+            .filter(User.role == "guard", User.active.is_(True), User.field_code == "")
+            .all()
+        )
+        if guards_no_code:
+            for g in guards_no_code:
+                g.field_code = generate_field_code(db, g.company_id)
+            db.commit()
     finally:
         db.close()
     yield

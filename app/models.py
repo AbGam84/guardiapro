@@ -35,6 +35,7 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(30), default="guard")
     badge: Mapped[str] = mapped_column(String(40), default="")
     phone: Mapped[str] = mapped_column(String(40), default="")
+    field_code: Mapped[str] = mapped_column(String(12), default="", index=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 

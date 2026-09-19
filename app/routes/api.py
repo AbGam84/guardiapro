@@ -26,6 +26,7 @@ from app.config import (
 )
 from app.database import get_db
 from app.deps import client_site_id, ensure_site_access, get_company, public_base, whatsapp_link
+from app.field_codes import generate_field_code
 from app.geo import format_distance, haversine_m
 from app.helpers import (
     ENTRY_LABELS,
@@ -61,6 +62,7 @@ from app.schemas import (
     CheckpointIn,
     CompanySettingsIn,
     LogEntryIn,
+    FieldCodeLoginIn,
     LoginIn,
     PatrolScheduleIn,
     QrScanIn,
@@ -84,7 +86,7 @@ def health():
         "slogan": SLOGAN,
         "tagline": TAGLINE,
         "production": IS_PRODUCTION,
-        "build": "20260923",
+        "build": "20260924",
     }
 
 
@@ -138,6 +140,32 @@ def login(payload: LoginIn, db: Session = Depends(get_db)):
         "user": user_dict(user),
         "company": company_dict(company),
         "copyright": COPYRIGHT,
+    }
+
+
+@router.post("/api/auth/login-code")
+def login_field_code(payload: FieldCodeLoginIn, db: Session = Depends(get_db)):
+    code = (payload.field_code or "").strip()
+    user = (
+        db.query(User)
+        .filter(
+            User.field_code == code,
+            User.role == "guard",
+            User.active.is_(True),
+        )
+        .first()
+    )
+    if not user:
+        raise HTTPException(status_code=401, detail="Código de oficial incorrecto")
+    company = get_company(db, user)
+    token = create_access_token(
+        {"sub": user.username, "role": user.role, "company_id": user.company_id, "company_code": company.code}
+    )
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": user_dict(user),
+        "company": company_dict(company),
     }
 
 
@@ -1130,7 +1158,74 @@ def list_guards(
         .order_by(User.name.asc())
         .all()
     )
-    return {"guards": [user_dict(u) for u in rows]}
+    changed = False
+    for g in rows:
+        if not g.field_code:
+            g.field_code = generate_field_code(db, user.company_id)
+            changed = True
+    if changed:
+        db.commit()
+        for g in rows:
+            db.refresh(g)
+    guards = []
+    for u in rows:
+        d = user_dict(u)
+        d["field_login_path"] = f"/oficial?code={u.field_code}"
+        guards.append(d)
+    return {"guards": guards}
+
+
+@router.post("/api/guards/{guard_id}/field-code")
+def regenerate_guard_field_code(
+    guard_id: int,
+    user: Annotated[User, Depends(require_roles("admin"))],
+    db: Session = Depends(get_db),
+):
+    guard = (
+        db.query(User)
+        .filter(
+            User.id == guard_id,
+            User.company_id == user.company_id,
+            User.role == "guard",
+            User.active.is_(True),
+        )
+        .first()
+    )
+    if not guard:
+        raise HTTPException(status_code=404, detail="Oficial no encontrado")
+    guard.field_code = generate_field_code(db, user.company_id)
+    db.commit()
+    db.refresh(guard)
+    return {"guard": user_dict(guard), "field_login_path": f"/oficial?code={guard.field_code}"}
+
+
+@router.get("/api/patrol/live")
+def patrol_live(
+    user: Annotated[User, Depends(require_roles("admin", "supervisor"))],
+    db: Session = Depends(get_db),
+):
+    """Turnos abiertos con recorrido GPS y marcas QR en tiempo real."""
+    shifts = (
+        db.query(Shift)
+        .filter(Shift.company_id == user.company_id, Shift.status == "open")
+        .order_by(Shift.started_at.desc())
+        .all()
+    )
+    rows = []
+    for sh in shifts:
+        st = shift_patrol_stats(db, sh)
+        rows.append(
+            {
+                "shift_id": sh.id,
+                "guard": st.get("guard"),
+                "site": st.get("site"),
+                "started_at": st.get("started_at"),
+                "total_distance_label": st.get("total_distance_label"),
+                "checkpoint_marks": st.get("checkpoint_marks"),
+                "marks": st.get("marks"),
+            }
+        )
+    return {"live_shifts": rows, "count": len(rows)}
 
 
 @router.get("/api/users")
@@ -1180,9 +1275,15 @@ def create_user(
         client_site_id=client_site_id if payload.role == "client" else None,
     )
     db.add(row)
+    db.flush()
+    if row.role == "guard":
+        row.field_code = generate_field_code(db, user.company_id)
     db.commit()
     db.refresh(row)
-    return {"user": user_dict(row)}
+    out = user_dict(row)
+    if row.role == "guard":
+        out["field_login_path"] = f"/oficial?code={row.field_code}"
+    return {"user": out}
 
 
 @router.patch("/api/company/settings")

@@ -29,6 +29,7 @@ def user_dict(u: User | None) -> dict:
         "role": u.role,
         "badge": u.badge,
         "phone": u.phone,
+        "field_code": u.field_code or "",
         "company_id": u.company_id,
         "client_site_id": u.client_site_id,
     }

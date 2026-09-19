@@ -46,6 +46,11 @@ def page_guard():
     return _html("guardia.html")
 
 
+@router.get("/oficial")
+def page_oficial():
+    return _html("oficial.html")
+
+
 @router.get("/admin")
 def page_admin():
     return _html("admin.html")

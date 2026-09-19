@@ -25,6 +25,7 @@
           <button class="tab" data-tab="alerts">Alertas</button>
           <button class="tab" data-tab="shifts">Bitácoras</button>
           <button class="tab" data-tab="assign">Programación</button>
+          <button class="tab" data-tab="oficiales">Oficiales</button>
         </div>
       </div>
       <div class="tab-section">
@@ -199,6 +200,30 @@
       </div>
     </div>
 
+    <div id="tab-oficiales" class="tab-panel hidden">
+      <div class="panel">
+        <h2>Recorrido en vivo (turnos abiertos)</h2>
+        <p class="muted">Cada celular trabaja con su código — el informe es solo del oficial en turno.</p>
+        <button class="btn btn-ghost" type="button" id="liveRefresh" style="margin-bottom:12px">Actualizar</button>
+        <div id="livePatrol"></div>
+      </div>
+      <div class="panel" style="margin-top:16px">
+        <h2>Códigos por oficial</h2>
+        <p class="muted">Entrega el código o el link al celular del guardia. Cada uno entra en <strong>/oficial</strong> sin mezclar turnos.</p>
+        <div id="officialCodes"></div>
+        <hr style="border-color:var(--border);margin:16px 0" />
+        <h3>Nuevo oficial + código</h3>
+        <form id="officialForm" class="form-grid two-col">
+          <label>Nombre completo<input name="name" required /></label>
+          <label>Placa / badge<input name="badge" placeholder="OF-001" /></label>
+          <label>Usuario (respaldo)<input name="username" required autocomplete="off" /></label>
+          <label>Clave (respaldo)<input name="password" type="password" required minlength="8" /></label>
+          <label>Teléfono<input name="phone" placeholder="+506..." /></label>
+          <div class="full"><button class="btn btn-primary" type="submit">Crear oficial y generar código</button></div>
+        </form>
+      </div>
+    </div>
+
     <div id="tab-assign" class="tab-panel hidden">
       <div class="panel">
         <h2>Programación de hoy</h2>
@@ -242,21 +267,7 @@
           <button class="btn btn-primary" type="submit">Guardar</button>
         </form>
       </div>
-      <div class="panel" style="margin-top:16px">
-        <h2>Oficiales</h2>
-        <p class="muted">Cree el usuario del guardia. Luego agregue el sitio (puesto) y programe el turno en <strong>Programación</strong>.</p>
-        <div id="guardAdminList"></div>
-        <hr style="border-color:var(--border);margin:16px 0" />
-        <h3>Nuevo oficial</h3>
-        <form id="guardForm" class="form-grid two-col">
-          <label>Nombre completo<input name="name" required placeholder="Carlos Mora" /></label>
-          <label>Usuario (login)<input name="username" required placeholder="cmora" autocomplete="off" /></label>
-          <label>Clave inicial<input name="password" type="password" required minlength="8" placeholder="Mínimo 8 caracteres" /></label>
-          <label>Placa / badge<input name="badge" placeholder="OF-001" /></label>
-          <label>Teléfono<input name="phone" placeholder="+506..." /></label>
-          <div class="full"><button class="btn btn-primary" type="submit">Crear oficial</button></div>
-        </form>
-      </div>
+      <p class="muted" style="margin-top:16px;font-size:.85rem">Oficiales y códigos de celular: pestaña <button type="button" class="btn btn-ghost" style="padding:2px 8px;font-size:.85rem" onclick="document.querySelector('[data-tab=oficiales]').click()">Oficiales</button></p>
       <div class="panel" style="margin-top:16px">
         <h2>Portal cliente</h2>
         <p class="muted">Usuario solo lectura para el condominio o empresa que contrata la seguridad. Debe existir un <strong>sitio</strong> antes.</p>
@@ -281,6 +292,10 @@
       document.querySelectorAll(".tab-panel").forEach(x => x.classList.add("hidden"));
       t.classList.add("active");
       document.getElementById("tab-" + t.dataset.tab).classList.remove("hidden");
+      if (t.dataset.tab === "oficiales") {
+        loadLivePatrol();
+        loadOfficialCodes();
+      }
     });
 
     async function loadDash() {
@@ -479,18 +494,71 @@
           <td>${(g.sites || []).join(", ") || "—"}</td></tr>`).join("") || "<tr><td colspan='5'>Sin datos</td></tr>"}</tbody></table>`;
     }
 
-    async function loadGuardAdmin() {
-      const g = await api("/api/guards");
-      const gopts = g.guards.map(u => `<option value="${u.id}">${u.name}</option>`).join("");
+    async function loadGuardPickers(guards) {
+      const list = guards || (await api("/api/guards")).guards || [];
+      const gopts = list.map(u => `<option value="${u.id}">${u.name}</option>`).join("");
       document.getElementById("guardPick").innerHTML = gopts || '<option value="">— Sin oficiales —</option>';
       document.getElementById("patrolGuard").innerHTML = '<option value="">Todos</option>' + gopts;
-      document.getElementById("guardAdminList").innerHTML = (g.guards || []).map(u =>
-        `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
-          <strong>${u.name}</strong> · <code>${u.username}</code>
-          ${u.badge ? `<span class="badge">${u.badge}</span>` : ""}
+      return list;
+    }
+
+    async function loadOfficialCodes() {
+      const guards = await loadGuardPickers();
+      const origin = location.origin;
+      document.getElementById("officialCodes").innerHTML = guards.map(u => {
+        const link = origin + (u.field_login_path || `/oficial?code=${u.field_code}`);
+        return `<div style="padding:14px 0;border-bottom:1px solid var(--border)">
+          <strong>${u.name}</strong> ${u.badge ? `<span class="badge">${u.badge}</span>` : ""}
           ${u.phone ? `<br><span class="muted">${u.phone}</span>` : ""}
-        </div>`
-      ).join("") || "<p class='muted'>Sin oficiales. Cree el primero abajo.</p>";
+          <div style="margin:10px 0;padding:12px;background:#0d1420;border-radius:10px;border:1px solid var(--border)">
+            <span class="muted" style="font-size:.75rem">CÓDIGO CELULAR</span><br>
+            <code style="font-size:1.6rem;color:var(--gold);letter-spacing:.15em">${u.field_code || "—"}</code>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+            <a class="btn btn-primary" href="${link}" target="_blank">Abrir en celular</a>
+            <button class="btn btn-ghost" type="button" data-copy="${link}">Copiar link</button>
+            <button class="btn btn-ghost" type="button" data-regen="${u.id}">Nuevo código</button>
+          </div>
+        </div>`;
+      }).join("") || "<p class='muted'>Sin oficiales. Cree el primero abajo.</p>";
+      document.getElementById("officialCodes").querySelectorAll("[data-copy]").forEach(btn => {
+        btn.onclick = () => {
+          navigator.clipboard.writeText(btn.dataset.copy);
+          btn.textContent = "Copiado";
+          setTimeout(() => { btn.textContent = "Copiar link"; }, 2000);
+        };
+      });
+      document.getElementById("officialCodes").querySelectorAll("[data-regen]").forEach(btn => {
+        btn.onclick = async () => {
+          if (!confirm("¿Generar nuevo código? El anterior dejará de funcionar.")) return;
+          await api(`/api/guards/${btn.dataset.regen}/field-code`, { method: "POST" });
+          await loadOfficialCodes();
+        };
+      });
+    }
+
+    async function loadLivePatrol() {
+      const d = await api("/api/patrol/live");
+      const rows = d.live_shifts || [];
+      document.getElementById("livePatrol").innerHTML = rows.map(r => {
+        const marks = (r.marks || []).map(m =>
+          `<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:.85rem">
+            <strong>${m.checkpoint || "Marca"}</strong> · ${fmt(m.time)}
+            ${m.distance_from_prev_m ? `<span class="muted"> · +${Math.round(m.distance_from_prev_m)} m</span>` : ""}
+          </div>`
+        ).join("");
+        return `<div style="padding:14px 0;border-bottom:1px solid var(--border)">
+          <span class="badge open">EN TURNO</span>
+          <strong style="display:block;margin:8px 0 4px">${r.guard?.name || "—"}</strong>
+          <span class="muted">${r.site?.name || "—"} · desde ${fmt(r.started_at)}</span>
+          <div class="stats" style="margin:10px 0">
+            <div class="stat"><span class="muted">Recorrido</span><b>${r.total_distance_label || "0 m"}</b></div>
+            <div class="stat"><span class="muted">Marcas QR</span><b>${r.checkpoint_marks || 0}</b></div>
+          </div>
+          ${marks || "<p class='muted'>Sin marcas QR aún en este turno.</p>"}
+          <a class="btn btn-ghost" href="/api/shifts/${r.shift_id}/report" target="_blank">Informe PDF turno</a>
+        </div>`;
+      }).join("") || "<p class='muted'>Ningún oficial en turno ahora. Cuando entren con su código verá el recorrido aquí.</p>";
     }
 
     async function loadClientAdmin() {
@@ -515,7 +583,8 @@
       document.getElementById("setWa").value = me.company.alert_whatsapp || "";
       document.querySelector('[name="shift_date"]').value = new Date().toISOString().slice(0, 10);
       await loadCamMeta();
-      await loadGuardAdmin();
+      await loadOfficialCodes();
+      await loadLivePatrol();
       await loadClientAdmin();
       await Promise.all([loadDash(), loadMissedAlerts(), loadShifts(), loadAssign(), loadSites(), loadPatrolSummary()]);
     }
@@ -584,16 +653,17 @@
       await api("/api/company/settings", { method: "PATCH", body: JSON.stringify(Object.fromEntries(fd)) });
       alert("Guardado");
     };
-    document.getElementById("guardForm").onsubmit = async (e) => {
+    document.getElementById("officialForm").onsubmit = async (e) => {
       e.preventDefault();
       const fd = new FormData(e.target);
       const body = Object.fromEntries(fd);
       body.role = "guard";
-      await api("/api/users", { method: "POST", body: JSON.stringify(body) });
+      const res = await api("/api/users", { method: "POST", body: JSON.stringify(body) });
       e.target.reset();
-      await loadGuardAdmin();
-      alert("Oficial creado. Ahora agregue sitio y programación de turno.");
+      await loadOfficialCodes();
+      alert(`Oficial creado.\nCódigo celular: ${res.user.field_code}\nLink: ${location.origin}${res.user.field_login_path || ""}`);
     };
+    document.getElementById("liveRefresh").onclick = loadLivePatrol;
     document.getElementById("clientForm").onsubmit = async (e) => {
       e.preventDefault();
       const fd = new FormData(e.target);

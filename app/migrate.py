@@ -47,6 +47,8 @@ def ensure_schema(engine: Engine) -> None:
                     conn.execute(text("ALTER TABLE users ADD COLUMN client_site_id INTEGER"))
                 else:
                     conn.execute(text("ALTER TABLE users ADD COLUMN client_site_id INTEGER"))
+            if "field_code" not in cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN field_code VARCHAR(12) DEFAULT ''"))
 
     if "shifts" in tables:
         cols = {c["name"] for c in insp.get_columns("shifts")}
