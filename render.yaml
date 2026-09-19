@@ -1,8 +1,8 @@
-# GuardiaPro — bitácora empresas de seguridad (Costa Rica)
+# Excalibu Sentinel — bitácora empresas de seguridad (Costa Rica)
 # https://dashboard.render.com/blueprints/new?repo=https://github.com/AbGam84/guardiapro
 services:
   - type: web
-    name: guardiapro
+    name: excalibu-sentinel
     runtime: python
     plan: free
     region: oregon

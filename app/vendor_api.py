@@ -48,7 +48,7 @@ def get_vendor(creds=Depends(security)):
     except JWTError as exc:
         raise HTTPException(status_code=401, detail="Token inválido") from exc
     if payload.get("role") != "vendor" or payload.get("sub") != VENDOR_USERNAME:
-        raise HTTPException(status_code=403, detail="Solo vendor GuardiaPro")
+        raise HTTPException(status_code=403, detail="Solo vendor Excalibu")
     return {"username": VENDOR_USERNAME, "name": VENDOR_NAME}
 
 

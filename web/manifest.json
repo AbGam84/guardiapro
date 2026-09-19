@@ -1,10 +1,14 @@
 {
-  "name": "GuardiaPro Bitácora",
-  "short_name": "GuardiaPro",
-  "description": "Bitácora y rondas para oficiales de seguridad",
+  "name": "Excalibu Sentinel",
+  "short_name": "Excalibu",
+  "description": "Bitácora, rondas QR y cámaras para empresas de seguridad",
   "start_url": "/guardia",
   "display": "standalone",
   "background_color": "#0a0f18",
   "theme_color": "#12c4a0",
-  "lang": "es-CR"
+  "lang": "es-CR",
+  "icons": [
+    { "src": "/static/excalibu-logo.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/static/favicon.png", "sizes": "64x64", "type": "image/png" }
+  ]
 }

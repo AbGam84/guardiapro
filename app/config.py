@@ -29,7 +29,7 @@ ADMIN_NAME = _env("GUARDIA_ADMIN_NAME", "Administrador")
 
 VENDOR_USERNAME = _env("GUARDIA_VENDOR_USER", "vendor")
 VENDOR_PASSWORD = _env("GUARDIA_VENDOR_PASSWORD", "GuardiaVendor2026")
-VENDOR_NAME = _env("GUARDIA_VENDOR_NAME", "GuardiaPro Vendor")
+VENDOR_NAME = _env("GUARDIA_VENDOR_NAME", "Excalibu Vendor")
 
 HOST = _env("HOST", "0.0.0.0")
 PORT = int(_env("PORT", "8097"))
@@ -39,8 +39,9 @@ PUBLIC_BASE_URL = (
 if PUBLIC_BASE_URL and not PUBLIC_BASE_URL.startswith("http"):
     PUBLIC_BASE_URL = f"https://{PUBLIC_BASE_URL}"
 
-PRODUCT_NAME = "GuardiaPro"
-TAGLINE = "Bitácora, rondas e incidentes — empresas de seguridad Costa Rica"
-COPYRIGHT = "© GuardiaPro · Costa Rica"
+PRODUCT_NAME = "Excalibu Sentinel"
+PRODUCT_SHORT = "Excalibu"
+TAGLINE = "La espada digital de su seguridad · bitácora, rondas y cámaras · Costa Rica"
+COPYRIGHT = "© Excalibu Sentinel · Costa Rica"
 SUPPORT_WHATSAPP = _env("GUARDIA_SUPPORT", "+50663706546")
 SHOW_DEMO_HINTS = _env("GUARDIA_SHOW_DEMO", "0" if IS_PRODUCTION else "1") in {"1", "true", "yes"}

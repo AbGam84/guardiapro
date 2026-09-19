@@ -2,6 +2,7 @@ from html import escape
 
 from sqlalchemy.orm import Session
 
+from app.config import COPYRIGHT, PRODUCT_NAME
 from app.geo import format_distance
 from app.helpers import ENTRY_LABELS, SEVERITY_LABELS, log_dict, shift_dict
 from app.models import Company, LogEntry, Shift
@@ -41,7 +42,7 @@ th{{background:#f0f4f8}}
 @media print{{button{{display:none}}}}
 </style></head><body>
 <button onclick="window.print()">Imprimir / PDF</button>
-<h1>Bitácora de servicio — GuardiaPro</h1>
+<h1>Bitácora de servicio — {escape(PRODUCT_NAME)}</h1>
 <p class="meta">
   <strong>{escape(company.name if company else "")}</strong><br>
   Oficial: {escape(guard.get("name") or "")} ({escape(guard.get("badge") or "")})<br>
@@ -53,7 +54,7 @@ th{{background:#f0f4f8}}
 <thead><tr><th>Fecha/hora</th><th>Tipo</th><th>Prioridad</th><th>Detalle</th></tr></thead>
 <tbody>{rows}</tbody>
 </table>
-<p class="meta" style="margin-top:20px">Documento generado por GuardiaPro · Costa Rica</p>
+<p class="meta" style="margin-top:20px">{escape(COPYRIGHT)}</p>
 </body></html>"""
 
 
@@ -91,7 +92,7 @@ def patrol_report_html(db: Session, company_id: int, *, days: int, guard_id: int
 
     return f"""<!DOCTYPE html>
 <html lang="es"><head><meta charset="UTF-8"/>
-<title>Reporte recorrido — GuardiaPro</title>
+<title>Reporte recorrido — {escape(PRODUCT_NAME)}</title>
 <style>
 body{{font-family:Segoe UI,sans-serif;margin:24px;color:#111}}
 h1{{margin:0 0 4px;font-size:1.4rem}}
@@ -123,5 +124,5 @@ Período: {escape(data.get("since") or "")} → {escape(data.get("until") or "")
 </table>
 <h2>Detalle de marcas y recorrido</h2>
 {detail or "<p class='muted'>Sin turnos registrados en el período.</p>"}
-<p class="meta" style="margin-top:20px">Documento generado por GuardiaPro · Costa Rica</p>
+<p class="meta" style="margin-top:20px">{escape(COPYRIGHT)}</p>
 </body></html>"""

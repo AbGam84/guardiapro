@@ -594,7 +594,7 @@ h1{{margin:0 0 4px}} .meta{{color:#555;margin-bottom:20px}}
 <button onclick="window.print()">Imprimir hoja QR</button>
 <h1>Puntos de ronda — QR</h1>
 <p class="meta"><strong>{company.name}</strong> · {site.name} · {site.address or ""}<br>
-Oficial escanea con GuardiaPro → registra lugar, hora y distancia de recorrido.</p>
+Oficial escanea con Excalibu Sentinel → registra lugar, hora y distancia de recorrido.</p>
 <div class="grid">{cards or "<p>Sin checkpoints. Créelos en Admin → Sitios.</p>"}</div>
 </body></html>"""
     return HTMLResponse(html)

@@ -3,14 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>GuardiaPro — acceso</title>
-  <link rel="stylesheet" href="/static/css/app.css?v=2" />
+  <title>Excalibu Sentinel — acceso</title>
+  <link rel="icon" href="/static/favicon.png" type="image/png" />
+  <link rel="stylesheet" href="/static/css/app.css?v=3" />
   <link rel="manifest" href="/manifest.json" />
 </head>
 <body>
   <div class="login-wrap panel">
-    <h1>GuardiaPro</h1>
-    <p class="muted">Bitácora digital para empresas de seguridad · Costa Rica</p>
+    <div class="brand-head">
+      <img src="/static/excalibu-logo.png" alt="Excalibu Sentinel" class="brand-logo" width="88" height="88" />
+      <div>
+        <h1>Excalibu <span class="brand-accent">Sentinel</span></h1>
+        <p class="muted">La espada digital de su seguridad · Costa Rica</p>
+      </div>
+    </div>
     <form id="loginForm" class="form-grid">
       <label>Código empresa (opcional)<input name="company_code" placeholder="demo-seguridad" autocomplete="organization" /></label>
       <label>Usuario<input name="username" required autocomplete="username" /></label>
@@ -48,11 +54,6 @@
         err.classList.remove("hidden");
       }
     });
-    if (getToken()) {
-      api("/api/auth/me").then((d) => {
-        location.href = d.user.role === "guard" ? "/guardia" : "/admin";
-      }).catch(() => setToken(""));
-    }
   </script>
 </body>
 </html>
