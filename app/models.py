@@ -175,6 +175,25 @@ class SecurityCamera(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
+class CameraPairToken(Base):
+    """QR temporal para vincular cámara celular, DVR o WiFi a un puesto."""
+
+    __tablename__ = "camera_pair_tokens"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    token: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    company_id: Mapped[int] = mapped_column(Integer, ForeignKey("companies.id"), index=True)
+    creator_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), index=True)
+    pair_kind: Mapped[str] = mapped_column(String(20), default="mobile")
+    raw_payload: Mapped[str] = mapped_column(Text, default="")
+    parsed_json: Mapped[str] = mapped_column(Text, default="")
+    camera_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("security_cameras.id"), nullable=True)
+    share_shift_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("shifts.id"), nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
 class LogEntry(Base):
     __tablename__ = "log_entries"
 

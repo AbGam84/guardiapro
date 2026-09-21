@@ -88,3 +88,9 @@ def ensure_schema(engine: Engine) -> None:
                 conn.execute(text("ALTER TABLE security_cameras ADD COLUMN mobile_frame VARCHAR(255) DEFAULT ''"))
             if "last_frame_at" not in cols:
                 conn.execute(text("ALTER TABLE security_cameras ADD COLUMN last_frame_at DATETIME"))
+
+    if "camera_pair_tokens" not in tables:
+        from app.database import Base
+        from app.models import CameraPairToken  # noqa: F401
+
+        Base.metadata.create_all(bind=engine, tables=[CameraPairToken.__table__])

@@ -58,6 +58,7 @@ from app.reports import patrol_report_html, shift_report_html
 from app.schemas import (
     AssignmentIn,
     CameraIn,
+    CameraPairScanIn,
     CameraUpdateIn,
     CheckpointIn,
     CompanySettingsIn,
@@ -86,7 +87,7 @@ def health():
         "slogan": SLOGAN,
         "tagline": TAGLINE,
         "production": IS_PRODUCTION,
-        "build": "20260928",
+        "build": "20260929",
     }
 
 
@@ -426,8 +427,14 @@ def mobile_camera_start(
     from app.mobile_camera import start_mobile_share
 
     sh = _shift_for_guard(shift_id, user, db)
-    cam = start_mobile_share(db, sh, user)
-    return {"ok": True, "camera": camera_dict(cam), "message": "Cámara celular compartida — visible en admin"}
+    cam, pair = start_mobile_share(db, sh, user)
+    return {
+        "ok": True,
+        "camera": camera_dict(cam),
+        "pair": pair,
+        "pair_qr_url": f"/api/cameras/pair-token/{pair['token']}/qr.png",
+        "message": "Transmisión activa — admin escanee el QR para vincular al puesto",
+    }
 
 
 @router.post("/api/shifts/{shift_id}/mobile-camera/frame")
@@ -483,6 +490,36 @@ def mobile_camera_stop(
     )
     db.commit()
     return {"ok": True, "message": "Transmisión detenida"}
+
+
+@router.get("/api/cameras/pair-token/{token}/qr.png")
+def camera_pair_qr_png(token: str):
+    from app.camera_qr_parse import pair_qr_text
+
+    return Response(qr_png(pair_qr_text(token.strip()[:64])), media_type="image/png")
+
+
+@router.post("/api/cameras/pair/scan")
+def cameras_pair_scan(
+    payload: CameraPairScanIn,
+    user: Annotated[User, Depends(require_roles("admin", "supervisor"))],
+    db: Session = Depends(get_db),
+):
+    from app.camera_pair import scan_and_register
+
+    try:
+        result = scan_and_register(
+            db,
+            user,
+            payload.qr_text.strip(),
+            payload.site_id,
+            name=payload.name.strip(),
+            auto_create=payload.auto_create,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    db.commit()
+    return result
 
 
 @router.get("/api/sites/{site_id}/checkpoints")

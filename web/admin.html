@@ -160,7 +160,20 @@
           <div id="camSiteHint" class="muted" style="font-size:.85rem;margin-top:6px"></div>
           <div id="camList" style="margin-top:16px"></div>
           <hr style="border-color:var(--border);margin:16px 0" />
-          <h3>Agregar cámara de este sitio</h3>
+          <h3>Añadir cámara escaneando QR</h3>
+          <p class="muted" style="font-size:.85rem;margin:0 0 10px">
+            Use la <strong>cámara de esta PC o celular</strong> para leer el QR del oficial (compartir cámara)
+            o el QR del <strong>DVR / NVR / WiFi</strong> (Hikvision, Dahua, Tapo, XMEye…).
+          </p>
+          <div id="camQrReader" style="max-width:100%;border-radius:10px;overflow:hidden"></div>
+          <p id="camQrStatus" class="muted" style="margin:8px 0;font-size:.85rem">—</p>
+          <button type="button" class="btn btn-primary" id="camQrToggle">Activar cámara para escanear QR</button>
+          <label style="display:block;margin-top:12px">O pegue contenido del QR
+            <input id="camQrPaste" placeholder="excalibu-cam:… · JSON del DVR · IP" />
+          </label>
+          <button type="button" class="btn btn-ghost btn-block" id="camQrPasteBtn" style="margin-top:8px">Registrar cámara desde texto QR</button>
+          <hr style="border-color:var(--border);margin:16px 0" />
+          <h3>Agregar cámara manualmente</h3>
           <p class="muted" style="font-size:.85rem;margin:0 0 12px">Paso 1: elija sitio arriba · Paso 2: complete datos · Paso 3: el guardia las ve al iniciar turno.</p>
           <form id="camForm" class="form-grid two-col">
             <input type="hidden" name="site_id" id="camSiteId" />
@@ -285,6 +298,7 @@
       </div>
     </div>
   </div>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="/static/js/api.js"></script>
   <script>
     document.getElementById("logout").onclick = () => { setToken(""); location.href = "/login"; };
@@ -590,6 +604,92 @@
       await loadClientAdmin();
       await Promise.all([loadDash(), loadMissedAlerts(), loadShifts(), loadAssign(), loadSites(), loadPatrolSummary()]);
     }
+
+    let camQrScanner = null;
+    let camQrActive = false;
+    let camQrLastScan = "";
+    let camQrScanLock = false;
+
+    function setCamQrStatus(msg, ok) {
+      const el = document.getElementById("camQrStatus");
+      el.textContent = msg;
+      el.style.color = ok ? "var(--ok)" : "var(--muted)";
+    }
+
+    function fillCamFormFromSuggest(s) {
+      if (!s) return;
+      const form = document.getElementById("camForm");
+      if (s.camera_type) form.camera_type.value = s.camera_type;
+      if (s.brand) form.brand.value = s.brand;
+      if (s.name) form.name.value = s.name;
+      if (s.location) form.location.value = s.location;
+      if (s.ip_address) form.ip_address.value = s.ip_address;
+      if (s.username) form.username.value = s.username;
+      if (s.password) form.password.value = s.password;
+      if (s.channel) form.channel.value = s.channel;
+      if (s.rtsp_port) form.rtsp_port.value = s.rtsp_port;
+      if (s.http_port) form.http_port.value = s.http_port;
+      if (s.notes) form.notes.value = s.notes;
+    }
+
+    async function registerCameraFromQr(text) {
+      const siteId = document.getElementById("camSite").value;
+      if (!siteId) { alert("Seleccione el sitio / puesto primero"); return; }
+      const qrText = (text || "").trim();
+      if (!qrText || camQrScanLock || qrText === camQrLastScan) return;
+      camQrScanLock = true;
+      camQrLastScan = qrText;
+      setCamQrStatus("Procesando QR…", true);
+      try {
+        const d = await api("/api/cameras/pair/scan", {
+          method: "POST",
+          body: JSON.stringify({ qr_text: qrText, site_id: Number(siteId), auto_create: true }),
+        });
+        if (d.action === "prefill") {
+          fillCamFormFromSuggest(d.suggest || d.parse);
+          setCamQrStatus(d.parse?.message || "Datos detectados — revise el formulario manual y guarde", true);
+          return;
+        }
+        setCamQrStatus(d.message || "Cámara registrada", true);
+        await loadCamerasAdmin(siteId);
+      } catch (ex) {
+        setCamQrStatus(ex.message || "Error al leer QR", false);
+        camQrLastScan = "";
+      } finally {
+        setTimeout(() => { camQrScanLock = false; }, 2000);
+      }
+    }
+
+    async function toggleCamQrScanner() {
+      const btn = document.getElementById("camQrToggle");
+      if (camQrActive && camQrScanner) {
+        await camQrScanner.stop().catch(() => {});
+        camQrScanner.clear();
+        camQrScanner = null;
+        camQrActive = false;
+        btn.textContent = "Activar cámara para escanear QR";
+        document.getElementById("camQrReader").innerHTML = "";
+        return;
+      }
+      camQrScanner = new Html5Qrcode("camQrReader");
+      btn.textContent = "Detener escáner QR";
+      camQrActive = true;
+      try {
+        await camQrScanner.start(
+          { facingMode: "environment" },
+          { fps: 8, qrbox: { width: 240, height: 240 } },
+          (text) => registerCameraFromQr(text)
+        );
+        setCamQrStatus("Apunte al QR del oficial o del DVR/NVR", true);
+      } catch (ex) {
+        setCamQrStatus("No se pudo abrir cámara: " + (ex.message || ex), false);
+        camQrActive = false;
+        btn.textContent = "Activar cámara para escanear QR";
+      }
+    }
+
+    document.getElementById("camQrToggle").onclick = toggleCamQrScanner;
+    document.getElementById("camQrPasteBtn").onclick = () => registerCameraFromQr(document.getElementById("camQrPaste").value);
 
     document.getElementById("camSite").onchange = updateCamSite;
     document.getElementById("qrSite").onchange = updateQrLinks;

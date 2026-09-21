@@ -61,7 +61,12 @@
         <p class="muted" style="margin:0 0 10px;font-size:.85rem">Transmite en vivo al panel admin — aparece como cámara del sitio mientras dura su turno.</p>
         <video id="mobilePreview" autoplay playsinline muted style="width:100%;max-height:220px;border-radius:10px;background:#000;display:none"></video>
         <p id="mobileCamStatus" class="muted" style="margin:8px 0;font-size:.85rem">—</p>
-        <button class="btn btn-primary btn-block" type="button" id="mobileCamStart">Iniciar transmisión al software</button>
+        <div id="mobilePairQr" class="hidden" style="text-align:center;margin:10px 0">
+          <p class="muted" style="font-size:.82rem">QR para que administración vincule esta cámara al puesto:</p>
+          <img id="mobilePairQrImg" alt="QR vincular cámara" width="200" height="200" style="background:#fff;padding:10px;border-radius:10px" />
+          <p class="muted" style="font-size:.75rem;margin-top:6px">Admin → Cámaras → escanear QR</p>
+        </div>
+        <button class="btn btn-primary btn-block" type="button" id="mobileCamStart">Iniciar transmisión + QR vincular</button>
         <button class="btn btn-danger btn-block hidden" type="button" id="mobileCamStop" style="margin-top:8px">Detener transmisión</button>
       </div>
 
@@ -355,6 +360,7 @@
       mobileCameraId = null;
       document.getElementById("mobileCamStart").classList.remove("hidden");
       document.getElementById("mobileCamStop").classList.add("hidden");
+      document.getElementById("mobilePairQr").classList.add("hidden");
       setMobileStatus("Transmisión detenida", false);
       if (shift?.site?.id) loadCameras(shift.site.id);
     }
@@ -373,7 +379,11 @@
         mobileCameraId = d.camera?.id;
         document.getElementById("mobileCamStart").classList.add("hidden");
         document.getElementById("mobileCamStop").classList.remove("hidden");
-        setMobileStatus("En vivo — administración puede ver su cámara", true);
+        if (d.pair_qr_url) {
+          document.getElementById("mobilePairQr").classList.remove("hidden");
+          document.getElementById("mobilePairQrImg").src = d.pair_qr_url + "?t=" + Date.now();
+        }
+        setMobileStatus("En vivo — muestre el QR al admin para vincular al puesto", true);
         await uploadMobileFrame();
         mobileUploadTimer = setInterval(uploadMobileFrame, 2500);
         loadCameras(shift.site.id);

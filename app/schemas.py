@@ -115,6 +115,13 @@ class CameraIn(BaseModel):
     notes: str = ""
 
 
+class CameraPairScanIn(BaseModel):
+    qr_text: str
+    site_id: int
+    name: str = ""
+    auto_create: bool = True
+
+
 class CameraUpdateIn(BaseModel):
     name: str | None = None
     camera_type: str | None = None
