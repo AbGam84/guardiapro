@@ -166,6 +166,11 @@ class SecurityCamera(Base):
     web_url: Mapped[str] = mapped_column(String(512), default="")
     onvif_port: Mapped[int] = mapped_column(Integer, default=80)
     notes: Mapped[str] = mapped_column(Text, default="")
+    share_guard_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    share_shift_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("shifts.id"), nullable=True, index=True)
+    share_active: Mapped[bool] = mapped_column(Boolean, default=False)
+    mobile_frame: Mapped[str] = mapped_column(String(255), default="")
+    last_frame_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 

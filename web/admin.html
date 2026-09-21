@@ -150,7 +150,7 @@
     <div id="tab-cameras" class="tab-panel hidden">
       <div class="panel">
         <h2>Cámaras del sitio custodiado</h2>
-        <p class="muted">Registre las cámaras del <strong>cliente</strong> que su empresa de seguridad cuida (condominio, bodega, plaza). El oficial las ve en su turno.</p>
+        <p class="muted">Registre las cámaras del <strong>cliente</strong> (WiFi, NVR, DVR). El <strong>oficial también puede compartir la cámara de su celular</strong> en vivo desde <code>/oficial</code> — aparece aquí automáticamente.</p>
         <div id="camNoSite" class="hidden" style="margin:12px 0;padding:14px;border-radius:12px;border:1px dashed var(--border);background:#0d1420">
           <strong>Sin sitios registrados</strong>
           <p class="muted" style="margin:8px 0 0">Primero cree el sitio en <button type="button" class="btn btn-ghost" style="padding:4px 8px;font-size:.85rem" onclick="document.querySelector('[data-tab=sites]').click()">Sitios</button> (nombre del lugar que custodian).</p>
@@ -171,6 +171,7 @@
                 <option value="dvr">Grabador DVR (registrar primero)</option>
                 <option value="nvr_channel">Canal en NVR</option>
                 <option value="dvr_channel">Canal en DVR</option>
+                <option value="mobile">Celular oficial (en vivo — lo activa el guardia)</option>
               </select>
             </label>
             <label>Marca<select name="brand" id="camBrand"></select></label>
@@ -423,15 +424,16 @@
         recs.map(r => `<option value="${r.id}">${r.name} (${r.camera_type_label})</option>`).join("");
       document.getElementById("camList").innerHTML = (d.cameras || []).map(c =>
         `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
-          <strong>${c.name}</strong> <span class="badge">${c.camera_type_label}</span><br>
-          <span class="muted">${c.brand_label} · ${c.location || c.ip_address || "—"} · Canal ${c.channel || 1}</span><br>
+          <strong>${c.name}</strong> <span class="badge">${c.camera_type_label}</span>
+          ${c.is_live ? ' <span class="badge open">EN VIVO</span>' : ''}<br>
+          <span class="muted">${c.camera_type === 'mobile' ? (c.location || 'Celular del oficial') : `${c.brand_label} · ${c.location || c.ip_address || "—"} · Canal ${c.channel || 1}`}</span><br>
           <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">
             <a class="btn btn-ghost" href="/cameras/${c.id}" target="_blank">Ver</a>
-            ${c.web_url ? `<a class="btn btn-ghost" href="${c.web_url}" target="_blank">Panel web</a>` : ""}
+            ${c.web_url && c.camera_type !== 'mobile' ? `<a class="btn btn-ghost" href="${c.web_url}" target="_blank">Panel web</a>` : ""}
             <button class="btn btn-ghost" type="button" data-del="${c.id}">Quitar</button>
           </div>
         </div>`
-      ).join("") || "<p class='muted'>Este sitio no tiene cámaras. Use el formulario abajo para registrar las del cliente.</p>";
+      ).join("") || "<p class='muted'>Sin cámaras aún. Registre las del cliente abajo o pida al oficial que comparta su celular en turno.</p>";
       document.getElementById("camList").querySelectorAll("[data-del]").forEach(btn => {
         btn.onclick = async () => {
           if (!confirm("¿Desactivar esta cámara?")) return;

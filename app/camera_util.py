@@ -6,6 +6,7 @@ CAMERA_TYPES = {
     "dvr": "Grabador DVR",
     "nvr_channel": "Canal en NVR",
     "dvr_channel": "Canal en DVR",
+    "mobile": "Celular oficial (en vivo)",
 }
 
 BRANDS = {

@@ -56,9 +56,18 @@
         <div id="patrolStats" class="stats" style="grid-template-columns:1fr 1fr"></div>
       </div>
 
+      <div class="panel" style="margin-bottom:12px;border-color:rgba(255,176,32,.35)">
+        <h2 style="margin:0 0 4px;font-size:1.05rem">Compartir cámara del celular</h2>
+        <p class="muted" style="margin:0 0 10px;font-size:.85rem">Transmite en vivo al panel admin — aparece como cámara del sitio mientras dura su turno.</p>
+        <video id="mobilePreview" autoplay playsinline muted style="width:100%;max-height:220px;border-radius:10px;background:#000;display:none"></video>
+        <p id="mobileCamStatus" class="muted" style="margin:8px 0;font-size:.85rem">—</p>
+        <button class="btn btn-primary btn-block" type="button" id="mobileCamStart">Iniciar transmisión al software</button>
+        <button class="btn btn-danger btn-block hidden" type="button" id="mobileCamStop" style="margin-top:8px">Detener transmisión</button>
+      </div>
+
       <div class="panel" style="margin-bottom:12px">
         <h2 style="margin:0 0 8px;font-size:1rem">Cámaras del sitio</h2>
-        <p class="muted" style="margin:0 0 8px;font-size:.85rem">WiFi, NVR y DVR instalados en el lugar que custodia.</p>
+        <p class="muted" style="margin:0 0 8px;font-size:.85rem">WiFi, NVR, DVR y su celular si está transmitiendo.</p>
         <div id="cameraList"></div>
       </div>
 
@@ -123,6 +132,9 @@
     let checkpoints = [];
     let qrScanner = null;
     let qrActive = false;
+    let mobileStream = null;
+    let mobileUploadTimer = null;
+    let mobileCameraId = null;
     function esc(s) { return (s || "").replace(/</g, "&lt;"); }
 
     function logDetailHtml(l) {
@@ -238,10 +250,12 @@
         }
         box.innerHTML = cams.map(c =>
           `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
-            <strong>${c.name}</strong> <span class="muted">${c.camera_type_label}</span><br>
+            <strong>${c.name}</strong>
+            <span class="badge">${c.camera_type_label}</span>
+            ${c.is_live ? '<span class="badge open">EN VIVO</span>' : ''}<br>
             <span class="muted" style="font-size:.85rem">${c.location || c.brand_label}</span><br>
             <a class="btn btn-ghost" style="margin-top:6px;display:inline-block" href="/cameras/${c.id}">Ver cámara</a>
-            ${c.web_url ? `<a class="btn btn-ghost" style="margin-top:6px" href="${c.web_url}" target="_blank">Panel</a>` : ""}
+            ${c.web_url && c.camera_type !== 'mobile' ? `<a class="btn btn-ghost" style="margin-top:6px" href="${c.web_url}" target="_blank">Panel</a>` : ""}
           </div>`
         ).join("");
       } catch (_) {
@@ -297,7 +311,91 @@
       loadCheckpoints(sh.site?.id);
       loadCameras(sh.site?.id);
       loadPatrolStats();
+      syncMobileCamUi();
     }
+
+    function setMobileStatus(msg, ok) {
+      const el = document.getElementById("mobileCamStatus");
+      el.textContent = msg;
+      el.style.color = ok ? "var(--ok)" : "var(--muted)";
+    }
+
+    async function uploadMobileFrame() {
+      if (!shift || !mobileCameraId || !mobileStream) return;
+      const video = document.getElementById("mobilePreview");
+      if (!video.videoWidth) return;
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.min(video.videoWidth, 1280);
+      canvas.height = Math.round(video.videoHeight * (canvas.width / video.videoWidth));
+      canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise(r => canvas.toBlob(r, "image/jpeg", 0.72));
+      if (!blob) return;
+      const fd = new FormData();
+      fd.append("photo", blob, "frame.jpg");
+      const r = await fetch(`/api/shifts/${shift.id}/mobile-camera/frame`, {
+        method: "POST",
+        headers: { Authorization: "Bearer " + getToken() },
+        body: fd,
+      });
+      if (r.ok) setMobileStatus("Transmitiendo al software…", true);
+    }
+
+    async function stopMobileShare() {
+      if (mobileUploadTimer) { clearInterval(mobileUploadTimer); mobileUploadTimer = null; }
+      if (mobileStream) {
+        mobileStream.getTracks().forEach(t => t.stop());
+        mobileStream = null;
+      }
+      const video = document.getElementById("mobilePreview");
+      video.style.display = "none";
+      video.srcObject = null;
+      if (shift) {
+        try { await api(`/api/shifts/${shift.id}/mobile-camera/stop`, { method: "POST" }); } catch (_) {}
+      }
+      mobileCameraId = null;
+      document.getElementById("mobileCamStart").classList.remove("hidden");
+      document.getElementById("mobileCamStop").classList.add("hidden");
+      setMobileStatus("Transmisión detenida", false);
+      if (shift?.site?.id) loadCameras(shift.site.id);
+    }
+
+    async function startMobileShare() {
+      if (!shift) { setMobileStatus("Inicie turno primero", false); return; }
+      try {
+        mobileStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" } },
+          audio: false,
+        });
+        const video = document.getElementById("mobilePreview");
+        video.srcObject = mobileStream;
+        video.style.display = "block";
+        const d = await api(`/api/shifts/${shift.id}/mobile-camera/start`, { method: "POST" });
+        mobileCameraId = d.camera?.id;
+        document.getElementById("mobileCamStart").classList.add("hidden");
+        document.getElementById("mobileCamStop").classList.remove("hidden");
+        setMobileStatus("En vivo — administración puede ver su cámara", true);
+        await uploadMobileFrame();
+        mobileUploadTimer = setInterval(uploadMobileFrame, 2500);
+        loadCameras(shift.site.id);
+      } catch (ex) {
+        setMobileStatus(ex.message || "No se pudo abrir la cámara", false);
+        if (mobileStream) stopMobileShare();
+      }
+    }
+
+    async function syncMobileCamUi() {
+      if (!shift) return;
+      try {
+        const st = await api(`/api/shifts/${shift.id}/mobile-camera`);
+        if (st.sharing && !mobileStream) {
+          setMobileStatus("Había transmisión activa — pulse Iniciar para reconectar cámara", false);
+          mobileCameraId = st.camera?.id;
+        }
+      } catch (_) {}
+    }
+
+    document.getElementById("mobileCamStart").onclick = startMobileShare;
+    document.getElementById("mobileCamStop").onclick = stopMobileShare;
 
     document.getElementById("entryType").onchange = (e) => {
       const t = e.target.value;
@@ -402,6 +500,7 @@
     document.getElementById("endForm").onsubmit = async (e) => {
       e.preventDefault();
       if (!shift || !confirm("¿Cerrar turno?")) return;
+      await stopMobileShare();
       const fd = new FormData(e.target);
       const gps = await getGps();
       await apiWithOffline(`/api/shifts/${shift.id}/close`, {

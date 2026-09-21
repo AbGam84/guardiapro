@@ -105,6 +105,8 @@ def marketing_page(page: str):
         "story.html": "story.html",
         "panfleto": "panfleto.html",
         "panfleto.html": "panfleto.html",
+        "informe": "informe.html",
+        "informe.html": "informe.html",
     }
     name = mapping.get(page, page if page.endswith(".html") else f"{page}.html")
     return _marketing(name)
@@ -123,6 +125,12 @@ def page_post_legacy():
 @router.get("/publicidad-story")
 def page_story_legacy():
     return _marketing("story.html")
+
+
+@router.get("/informe")
+@router.get("/informe-seguridad")
+def page_informe_seguridad():
+    return _marketing("informe.html")
 
 
 @router.get("/publicidad-panfleto")

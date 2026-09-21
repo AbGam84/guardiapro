@@ -154,12 +154,20 @@ def camera_dict(cam: SecurityCamera | None, *, show_secrets: bool = False) -> di
         username=cam.username,
         web_override=cam.web_url,
     )
+    live_url = cam.stream_url
+    if cam.camera_type == "mobile" and cam.share_active:
+        from app.mobile_camera import stream_url as mobile_stream
+
+        live_url = mobile_stream(cam.id, cam.last_frame_at)
     return {
         "id": cam.id,
         "site_id": cam.site_id,
         "parent_id": cam.parent_id,
         "camera_type": cam.camera_type,
         "camera_type_label": CAMERA_TYPES.get(cam.camera_type, cam.camera_type),
+        "share_active": bool(cam.share_active),
+        "is_live": cam.camera_type == "mobile" and cam.share_active,
+        "last_frame_at": cam.last_frame_at.isoformat() if cam.last_frame_at else None,
         "name": cam.name,
         "brand": cam.brand,
         "brand_label": BRANDS.get(cam.brand, cam.brand),
@@ -174,7 +182,7 @@ def camera_dict(cam: SecurityCamera | None, *, show_secrets: bool = False) -> di
         "password": cam.password if show_secrets else "",
         "rtsp_url": rtsp if show_secrets else ("••••••••" if rtsp else ""),
         "rtsp_url_hint": "Configurado" if rtsp else "",
-        "stream_url": cam.stream_url,
+        "stream_url": live_url or cam.stream_url,
         "web_url": web or cam.web_url,
         "onvif_port": cam.onvif_port,
         "notes": cam.notes,

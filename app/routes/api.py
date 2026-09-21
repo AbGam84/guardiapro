@@ -86,7 +86,7 @@ def health():
         "slogan": SLOGAN,
         "tagline": TAGLINE,
         "production": IS_PRODUCTION,
-        "build": "20260927",
+        "build": "20260928",
     }
 
 
@@ -382,8 +382,107 @@ def delete_camera(
     if not row:
         raise HTTPException(status_code=404, detail="Cámara no encontrada")
     row.active = False
+    if row.camera_type == "mobile":
+        row.share_active = False
     db.commit()
     return {"ok": True}
+
+
+def _shift_for_guard(shift_id: int, user: User, db: Session) -> Shift:
+    sh = (
+        db.query(Shift)
+        .filter(Shift.id == shift_id, Shift.company_id == user.company_id, Shift.status == "open")
+        .first()
+    )
+    if not sh:
+        raise HTTPException(status_code=404, detail="Turno no encontrado o cerrado")
+    if user.role == "guard" and sh.guard_id != user.id:
+        raise HTTPException(status_code=403, detail="Solo el oficial del turno")
+    return sh
+
+
+@router.get("/api/shifts/{shift_id}/mobile-camera")
+def mobile_camera_status(
+    shift_id: int,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Session = Depends(get_db),
+):
+    from app.mobile_camera import active_mobile_camera
+
+    sh = _shift_for_guard(shift_id, user, db)
+    cam = active_mobile_camera(db, sh.id, sh.guard_id)
+    return {
+        "sharing": cam is not None,
+        "camera": camera_dict(cam) if cam else None,
+    }
+
+
+@router.post("/api/shifts/{shift_id}/mobile-camera/start")
+def mobile_camera_start(
+    shift_id: int,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Session = Depends(get_db),
+):
+    from app.mobile_camera import start_mobile_share
+
+    sh = _shift_for_guard(shift_id, user, db)
+    cam = start_mobile_share(db, sh, user)
+    return {"ok": True, "camera": camera_dict(cam), "message": "Cámara celular compartida — visible en admin"}
+
+
+@router.post("/api/shifts/{shift_id}/mobile-camera/frame")
+async def mobile_camera_frame(
+    shift_id: int,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Session = Depends(get_db),
+    photo: UploadFile = File(...),
+):
+    from app.mobile_camera import active_mobile_camera, frame_path, stream_url
+
+    sh = _shift_for_guard(shift_id, user, db)
+    cam = active_mobile_camera(db, sh.id, user.id)
+    if not cam:
+        raise HTTPException(status_code=400, detail="Inicie la transmisión primero")
+    ext = Path(photo.filename or "frame.jpg").suffix.lower() or ".jpg"
+    if ext not in {".jpg", ".jpeg", ".png", ".webp"}:
+        raise HTTPException(status_code=400, detail="Formato no permitido")
+    dest = frame_path(cam.id)
+    async with aiofiles.open(dest, "wb") as f:
+        await f.write(await photo.read())
+    fname = f"mobile/cam_{cam.id}.jpg"
+    cam.mobile_frame = fname
+    cam.last_frame_at = datetime.utcnow()
+    cam.stream_url = stream_url(cam.id, cam.last_frame_at)
+    db.commit()
+    db.refresh(cam)
+    return {"ok": True, "camera": camera_dict(cam)}
+
+
+@router.post("/api/shifts/{shift_id}/mobile-camera/stop")
+def mobile_camera_stop(
+    shift_id: int,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Session = Depends(get_db),
+):
+    from app.mobile_camera import active_mobile_camera
+
+    sh = _shift_for_guard(shift_id, user, db)
+    cam = active_mobile_camera(db, sh.id, user.id)
+    if not cam:
+        return {"ok": True, "message": "No había transmisión activa"}
+    cam.share_active = False
+    db.add(
+        LogEntry(
+            company_id=user.company_id,
+            shift_id=sh.id,
+            guard_id=user.id,
+            entry_type="novedad",
+            note="Detuvo transmisión de cámara celular",
+            severity="normal",
+        )
+    )
+    db.commit()
+    return {"ok": True, "message": "Transmisión detenida"}
 
 
 @router.get("/api/sites/{site_id}/checkpoints")
@@ -843,6 +942,9 @@ def close_shift(
     end_note = (payload.note or "Fin de turno").strip()
     if payload.lat is not None and payload.lng is not None:
         end_note = f"{end_note} · GPS {payload.lat:.5f}, {payload.lng:.5f}"
+    from app.mobile_camera import stop_shares_for_shift
+
+    stop_shares_for_shift(db, sh.id)
     db.add(
         LogEntry(
             company_id=user.company_id,

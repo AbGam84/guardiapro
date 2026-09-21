@@ -1,53 +1,75 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Excalibu Sentinel — cámara</title>
-  <link rel="icon" href="/static/favicon.png" type="image/png" />
-  <link rel="stylesheet" href="/static/css/app.css?v=3" />
-</head>
-<body>
-  <div class="shell">
-    <div class="topbar">
-      <div><h1 id="camTitle">Cámara</h1><p class="muted" id="camMeta">—</p></div>
-      <a class="btn btn-ghost" href="/guardia">Volver</a>
-    </div>
-    <div class="panel" id="viewer">
-      <p class="muted">Cargando…</p>
-    </div>
-    <div class="panel" style="margin-top:12px" id="actions"></div>
-  </div>
-  <script src="/static/js/api.js"></script>
-  <script>
-    const id = location.pathname.split("/").pop();
-    async function load() {
-      const d = await api(`/api/cameras/${id}`);
-      const c = d.camera;
-      document.getElementById("camTitle").textContent = c.name;
-      document.getElementById("camMeta").textContent = `${c.camera_type_label} · ${c.brand_label} · ${c.location || c.ip_address || ""}`;
-      let html = "";
-      if (c.stream_url) {
-        html += `<img src="${c.stream_url}" alt="${c.name}" style="width:100%;max-height:420px;object-fit:contain;background:#000;border-radius:8px" onerror="this.replaceWith(Object.assign(document.createElement('p'),{className:'muted',textContent:'Vista en vivo no disponible en navegador. Use enlace web o app del fabricante.'}))"/>`;
-      } else {
-        html += `<p class="muted">Sin URL de video en navegador. Abra el panel web o la app del fabricante (RTSP requiere VLC en PC).</p>`;
-      }
-      document.getElementById("viewer").innerHTML = html;
-      let btns = "";
-      if (c.web_url) btns += `<a class="btn btn-primary btn-block" href="${c.web_url}" target="_blank" rel="noopener">Abrir panel web</a>`;
-      btns += `<button class="btn btn-ghost btn-block" type="button" id="logView">Registrar revisión en bitácora</button>`;
-      document.getElementById("actions").innerHTML = btns;
-      document.getElementById("logView").onclick = async () => {
-        const active = await api("/api/shifts/active");
-        if (!active.shift) { alert("Inicie turno primero"); return; }
-        await api(`/api/shifts/${active.shift.id}/log`, {
-          method: "POST",
-          body: JSON.stringify({ entry_type: "novedad", note: `Revisión cámara: ${c.name} (${c.location || c.camera_type_label})`, severity: "normal" }),
-        });
-        alert("Registrado en bitácora");
-      };
-    }
-    load().catch(() => { location.href = "/login"; });
-  </script>
-</body>
-</html>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Excalibu Sentinel — cámara</title>
+  <link rel="icon" href="/static/favicon.png" type="image/png" />
+  <link rel="stylesheet" href="/static/css/app.css?v=6" />
+</head>
+<body>
+  <div class="shell">
+    <div class="topbar">
+      <div><h1 id="camTitle">Cámara</h1><p class="muted" id="camMeta">—</p></div>
+      <a class="btn btn-ghost" href="/guardia">Volver</a>
+    </div>
+    <div class="panel" id="viewer">
+      <p class="muted">Cargando…</p>
+    </div>
+    <div class="panel" style="margin-top:12px" id="actions"></div>
+  </div>
+  <script src="/static/js/api.js"></script>
+  <script>
+    const id = location.pathname.split("/").pop();
+    let cam = null;
+    let refreshTimer = null;
+
+    function renderViewer() {
+      const box = document.getElementById("viewer");
+      if (!cam) return;
+      if (cam.stream_url) {
+        const live = cam.camera_type === "mobile" && cam.is_live;
+        box.innerHTML = `
+          ${live ? '<span class="badge open" style="margin-bottom:8px;display:inline-block">EN VIVO — celular oficial</span>' : ""}
+          <img id="camImg" src="${cam.stream_url}" alt="${cam.name}"
+            style="width:100%;max-height:420px;object-fit:contain;background:#000;border-radius:8px"
+            onerror="this.replaceWith(Object.assign(document.createElement('p'),{className:'muted',textContent:'Vista en vivo no disponible. Si es celular, el oficial debe iniciar transmisión.'}))"/>`;
+        if (live) {
+          if (refreshTimer) clearInterval(refreshTimer);
+          refreshTimer = setInterval(() => {
+            const img = document.getElementById("camImg");
+            if (img) img.src = cam.stream_url.split("?")[0] + "?t=" + Date.now();
+          }, 2500);
+        }
+      } else {
+        box.innerHTML = `<p class="muted">Sin imagen en navegador. ${cam.camera_type === "mobile" ? "El oficial debe pulsar «Iniciar transmisión» en su celular." : "Use panel web o RTSP/VLC."}</p>`;
+      }
+    }
+
+    async function load() {
+      const d = await api(`/api/cameras/${id}`);
+      cam = d.camera;
+      document.getElementById("camTitle").textContent = cam.name;
+      document.getElementById("camMeta").textContent = `${cam.camera_type_label} · ${cam.brand_label} · ${cam.location || cam.ip_address || ""}`;
+      renderViewer();
+      let btns = "";
+      if (cam.web_url && cam.camera_type !== "mobile") {
+        btns += `<a class="btn btn-primary btn-block" href="${cam.web_url}" target="_blank" rel="noopener">Abrir panel web</a>`;
+      }
+      btns += `<button class="btn btn-ghost btn-block" type="button" id="logView">Registrar revisión en bitácora</button>`;
+      document.getElementById("actions").innerHTML = btns;
+      document.getElementById("logView").onclick = async () => {
+        const active = await api("/api/shifts/active");
+        if (!active.shift) { alert("Inicie turno primero"); return; }
+        await api(`/api/shifts/${active.shift.id}/log`, {
+          method: "POST",
+          body: JSON.stringify({ entry_type: "novedad", note: `Revisión cámara: ${cam.name} (${cam.location || cam.camera_type_label})`, severity: "normal" }),
+        });
+        alert("Registrado en bitácora");
+      };
+    }
+    load().catch(() => { location.href = "/login"; });
+  </script>
+</body>
+</html>
+

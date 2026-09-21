@@ -70,3 +70,21 @@ def ensure_schema(engine: Engine) -> None:
                 conn.execute(text("ALTER TABLE log_entries ADD COLUMN involved VARCHAR(255) DEFAULT ''"))
             if "action_taken" not in cols:
                 conn.execute(text("ALTER TABLE log_entries ADD COLUMN action_taken TEXT DEFAULT ''"))
+
+    if "security_cameras" in tables:
+        cols = {c["name"] for c in insp.get_columns("security_cameras")}
+        dialect = engine.dialect.name
+        with engine.begin() as conn:
+            if "share_guard_id" not in cols:
+                conn.execute(text("ALTER TABLE security_cameras ADD COLUMN share_guard_id INTEGER"))
+            if "share_shift_id" not in cols:
+                conn.execute(text("ALTER TABLE security_cameras ADD COLUMN share_shift_id INTEGER"))
+            if "share_active" not in cols:
+                if dialect == "sqlite":
+                    conn.execute(text("ALTER TABLE security_cameras ADD COLUMN share_active BOOLEAN DEFAULT 0"))
+                else:
+                    conn.execute(text("ALTER TABLE security_cameras ADD COLUMN share_active BOOLEAN DEFAULT FALSE"))
+            if "mobile_frame" not in cols:
+                conn.execute(text("ALTER TABLE security_cameras ADD COLUMN mobile_frame VARCHAR(255) DEFAULT ''"))
+            if "last_frame_at" not in cols:
+                conn.execute(text("ALTER TABLE security_cameras ADD COLUMN last_frame_at DATETIME"))
