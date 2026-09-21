@@ -53,6 +53,10 @@ class VendorUserIn(BaseModel):
     phone: str = ""
 
 
+class VendorResetPasswordIn(BaseModel):
+    password: str = Field(min_length=6)
+
+
 def slugify(text: str) -> str:
     text = unicodedata.normalize("NFKD", text or "").encode("ascii", "ignore").decode("ascii")
     text = re.sub(r"[^a-zA-Z0-9]+", "-", text).strip("-").lower()
@@ -232,6 +236,36 @@ def vendor_create_user(
             "company_code": company.code,
         },
         "message": f"Usuario {role} creado para {company.name}",
+    }
+
+
+@router.post("/companies/{company_id}/users/{user_id}/reset-password")
+def vendor_reset_user_password(
+    company_id: int,
+    user_id: int,
+    payload: VendorResetPasswordIn,
+    db: Session = Depends(get_db),
+    vendor=Depends(get_vendor),
+):
+    row = (
+        db.query(User)
+        .filter(
+            User.id == user_id,
+            User.company_id == company_id,
+            User.active.is_(True),
+            User.role.in_(("admin", "supervisor")),
+        )
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Administrador no encontrado")
+    row.password_hash = hash_password(payload.password)
+    db.commit()
+    return {
+        "ok": True,
+        "user": user_dict(row),
+        "message": f"Clave restablecida para «{row.username}». Entrada: /login",
+        "login": {"url": "/login", "username": row.username, "company_code_hint": "Dejar vacío"},
     }
 
 

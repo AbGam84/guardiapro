@@ -194,8 +194,21 @@
       document.getElementById("adminList").innerHTML = [...(d.admins || []), ...(d.supervisors || [])].map(u =>
         `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
           <strong>${u.name}</strong> · <code>${u.username}</code> · <span class="badge">${u.role}</span>
+          <div style="margin-top:6px">
+            <button class="btn btn-ghost" type="button" data-reset-admin="${u.id}" data-uname="${u.username}">Restablecer clave</button>
+          </div>
         </div>`
       ).join("") || "<p class='muted'>Sin administradores extra. Cree uno abajo.</p>";
+      document.getElementById("adminList").querySelectorAll("[data-reset-admin]").forEach(btn => {
+        btn.onclick = async () => {
+          const pwd = prompt(`Nueva clave para ${btn.dataset.uname} (mínimo 6 caracteres):`);
+          if (!pwd || pwd.length < 6) return;
+          const r = await vapi(`/api/vendor/companies/${selectedCompanyId}/users/${btn.dataset.resetAdmin}/reset-password`, {
+            method: "POST", body: JSON.stringify({ password: pwd }),
+          });
+          alert(`${r.message}\n\n/login\nUsuario: ${btn.dataset.uname}\nClave: ${pwd}`);
+        };
+      });
 
       const origin = location.origin;
       document.getElementById("guardList").innerHTML = (d.guards || []).map(u => {
@@ -241,20 +254,28 @@
 
     document.getElementById("coForm").onsubmit = async (e) => {
       e.preventDefault();
+      const err = document.getElementById("vErr");
+      err.classList.add("hidden");
       const fd = new FormData(e.target);
       const body = Object.fromEntries(fd.entries());
-      const d = await vapi("/api/vendor/companies", { method: "POST", body: JSON.stringify(body) });
-      const c = d.credentials || {};
-      const box = document.getElementById("coResult");
-      box.classList.remove("hidden");
-      box.innerHTML = `<strong>${d.message}</strong><br><br>
-        Entrega al cliente:<br>
-        · Panel operativo: <code>${origin}/admin</code><br>
-        · Código empresa: <code>${c.company_code}</code><br>
-        · Usuario admin: <code>${c.username}</code><br>
-        · Clave: la que acaba de definir`;
-      e.target.reset();
-      await showApp();
+      try {
+        const d = await vapi("/api/vendor/companies", { method: "POST", body: JSON.stringify(body) });
+        const c = d.credentials || {};
+        const pwd = body.admin_password || "";
+        const box = document.getElementById("coResult");
+        box.classList.remove("hidden");
+        box.innerHTML = `<strong>${d.message}</strong><br><br>
+          <strong>Entregue al cliente (copie tal cual):</strong><br>
+          · Entrada: <code>${origin}/login</code> (NO /comercial)<br>
+          · Usuario: <code>${c.username}</code><br>
+          · Clave: <code>${pwd.replace(/</g,"")}</code><br>
+          · Código empresa: <code>${c.company_code}</code> (o déjelo vacío al entrar)`;
+        e.target.reset();
+        await showApp();
+      } catch (ex) {
+        err.textContent = ex.message + (ex.message.includes("ya existe") ? " — use otro usuario, ej. admin.roble" : "");
+        err.classList.remove("hidden");
+      }
     };
 
     document.getElementById("adminForm").onsubmit = async (e) => {
