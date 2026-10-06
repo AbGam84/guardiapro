@@ -1,0 +1,20 @@
+Si /login sigue con Excalibu y /api/health muestra build: 20260929
+====================================================================
+
+1. Render Dashboard → excalibu-sentinel → Deploys
+   Si hay un deploy "In progress" hace más de 10 min → Cancel deploy.
+
+2. Environment → borre GUARDIA_BUILD si está fijo en 20260929
+   (así /api/health muestra el commit real).
+
+3. Manual Deploy → Deploy latest commit (rama main).
+
+4. Cuando diga Live, pruebe (Ctrl+F5):
+   https://excalibu-sentinel.onrender.com/login?empresa=grupo-gomez
+   https://excalibu-sentinel.onrender.com/acceso/grupo-gomez
+
+5. Logo del cliente (Grupo Gómez):
+   https://excalibu-sentinel.onrender.com/api/company/logo?company_id=1
+
+Subir logo otra vez desde PC:
+  python scripts/upload_cloud_company_logo.py grupo-gomez

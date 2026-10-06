@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
+from app.branded_login import branded_login_html
 from app.database import get_db
 from app.models import Company
 from app.paths import WEB, WEB_MARKETING
@@ -29,12 +30,20 @@ def _safe_company_code(raw: str | None) -> str:
 
 
 def _login_html(request: Request, db: Session) -> HTMLResponse:
+    headers = {"Cache-Control": "no-store, no-cache, must-revalidate"}
+    code = _safe_company_code(request.query_params.get("empresa") or request.query_params.get("code"))
+    if code:
+        company = db.query(Company).filter(Company.code == code, Company.active.is_(True)).first()
+        if company:
+            nxt = (request.query_params.get("next") or "").strip()
+            if nxt.startswith("/"):
+                return HTMLResponse(branded_login_html(company, next_path=nxt), headers=headers)
+
     path = WEB / "login.html"
     if not path.is_file():
         raise HTTPException(status_code=404, detail="Página no encontrada")
     content = path.read_text(encoding="utf-8")
-    code = _safe_company_code(request.query_params.get("empresa") or request.query_params.get("code"))
-    if code and db.query(Company).filter(Company.code == code, Company.active.is_(True)).first():
+    if code:
         inject = f"""
 <script id="excalibu-brand-prefill">
 (function(){{
@@ -55,7 +64,20 @@ def _login_html(request: Request, db: Session) -> HTMLResponse:
 </script>
 """
         content = content.replace("</body>", inject + "\n</body>")
-    return HTMLResponse(content, headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
+    return HTMLResponse(content, headers=headers)
+
+
+@router.get("/acceso/{company_code}")
+def page_branded_access(company_code: str, request: Request, db: Session = Depends(get_db)):
+    code = _safe_company_code(company_code)
+    if not code:
+        raise HTTPException(status_code=404, detail="Empresa no encontrada")
+    company = db.query(Company).filter(Company.code == code, Company.active.is_(True)).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Empresa no encontrada")
+    nxt = (request.query_params.get("next") or "").strip()
+    next_path = nxt if nxt.startswith("/") else ""
+    return HTMLResponse(branded_login_html(company, next_path=next_path), headers={"Cache-Control": "no-store"})
 
 
 def _marketing(name: str) -> HTMLResponse:
