@@ -37,6 +37,7 @@ from app.company_logo import (
 )
 from app.deps import client_site_id, ensure_site_access, get_company, public_base, whatsapp_link
 from app.subscription import assert_can_add_guard, assert_subscription_active, refresh_subscription_status
+from app.terminology import labels as product_labels
 from app.field_codes import generate_field_code
 from app.geo import format_distance, haversine_m
 from app.helpers import (
@@ -124,6 +125,7 @@ def product():
         ],
         "support": SUPPORT_WHATSAPP,
         "show_demo_hints": SHOW_DEMO_HINTS,
+        "labels": product_labels(),
         "entry_types": [{"code": k, "label": v} for k, v in ENTRY_LABELS.items()],
         "severities": [{"code": k, "label": v} for k, v in SEVERITY_LABELS.items()],
     }
@@ -1408,7 +1410,7 @@ def list_guards(
             db.refresh(g)
     guards = []
     for u in rows:
-        d = user_dict(u)
+        d = user_dict(u, db)
         d["field_login_path"] = f"/oficial?code={u.field_code}"
         guards.append(d)
     return {"guards": guards}
@@ -1493,9 +1495,7 @@ def create_user(
     if db.query(User).filter(User.username == uname).first():
         raise HTTPException(status_code=400, detail="Usuario ya existe")
     client_site_id = payload.client_site_id
-    if payload.role == "client":
-        if not client_site_id:
-            raise HTTPException(status_code=400, detail="Cliente requiere sitio asignado")
+    if payload.role in ("client", "guard") and client_site_id:
         site = (
             db.query(ClientSite)
             .filter(ClientSite.id == client_site_id, ClientSite.company_id == user.company_id)
@@ -1503,9 +1503,12 @@ def create_user(
         )
         if not site:
             raise HTTPException(status_code=404, detail="Sitio no encontrado")
+    if payload.role == "client" and not client_site_id:
+        raise HTTPException(status_code=400, detail="Cliente requiere sitio asignado")
     company = get_company(db, user)
     if payload.role == "guard":
         assert_can_add_guard(db, company)
+    home_site = client_site_id if payload.role in ("client", "guard") else None
     row = User(
         company_id=user.company_id,
         name=payload.name.strip(),
@@ -1514,7 +1517,7 @@ def create_user(
         role=payload.role,
         badge=payload.badge.strip(),
         phone=payload.phone.strip(),
-        client_site_id=client_site_id if payload.role == "client" else None,
+        client_site_id=home_site,
     )
     db.add(row)
     db.flush()
@@ -1522,7 +1525,7 @@ def create_user(
         row.field_code = generate_field_code(db, user.company_id)
     db.commit()
     db.refresh(row)
-    out = user_dict(row)
+    out = user_dict(row, db)
     if row.role == "guard":
         out["field_login_path"] = f"/oficial?code={row.field_code}"
     return {"user": out}

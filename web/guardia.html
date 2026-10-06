@@ -430,7 +430,10 @@
         ).join("");
       }
       const sites = await api("/api/sites");
-      document.getElementById("siteSelect").innerHTML = sites.sites.map(s => `<option value="${s.id}">${s.name}</option>`).join("");
+      const sel = document.getElementById("siteSelect");
+      sel.innerHTML = sites.sites.map(s => `<option value="${s.id}">${s.name}</option>`).join("");
+      const home = me.user?.client_site_id;
+      if (home) sel.value = String(home);
       const active = await api("/api/shifts/active");
       showShift(active.shift);
       await syncOfflineQueue();

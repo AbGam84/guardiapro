@@ -1,0 +1,34 @@
+Grupo Gómez y Asociados — puestos Lima (no nombres de personas)
+================================================================
+
+Modelo operativo
+----------------
+- Cada celular / código es un **puesto** (Lima1…), no una persona.
+- Si renuncian o cambian guardia, el puesto y el código QR/ronda siguen igual.
+- En admin aparece como **Puestos** (GUARDIA_POST_MODE=1 por defecto).
+
+Mapa acordado
+-------------
+  Condominio Loma Verde  → Lima1, Lima2
+  Avellana               → Lima3
+  Potrero Hotel Fiesta   → Lima4
+  Playa Grande Casa Colibrí → Lima6
+
+Reportes
+--------
+- Bitácora PDF por turno: hora, marcas QR, recorrido GPS.
+- Recorridos (7 / 15 días): resumen por puesto + detalle hora a hora.
+
+Alta en sistema
+---------------
+1. /comercial → empresa «Grupo Gómez y Asociados», código grupo-gomez, 5 oficiales, ₡42.000/mes.
+2. Local o servidor:
+     python scripts/setup_grupo_gomez_puestos.py
+3. /admin → QR rondas: crear puntos por sitio e imprimir hoja.
+4. Entregar a cada puesto: link /oficial?code=XXXXXX (código de 6 dígitos en admin → Puestos).
+
+Renovación mensual
+------------------
+/comercial → Cliente pagó — reactivar 1 mes (misma clave, mismo usuario).
+
+Contacto: soporte@absolar.latam · WhatsApp +506 6370-6546

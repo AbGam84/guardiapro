@@ -28,7 +28,7 @@
           <button class="tab" data-tab="alerts">Alertas</button>
           <button class="tab" data-tab="shifts">Bitácoras</button>
           <button class="tab" data-tab="assign">Programación</button>
-          <button class="tab" data-tab="oficiales">Oficiales</button>
+          <button class="tab" data-tab="oficiales" id="tabBtnPuestos">Puestos</button>
         </div>
       </div>
       <div class="tab-section">
@@ -85,7 +85,7 @@
       <div class="panel">
         <h2>Historial de turnos</h2>
         <table class="table" id="shiftTable"><thead><tr>
-          <th>Oficial</th><th>Sitio</th><th>Inicio</th><th>Fin</th><th>Estado</th><th></th>
+          <th id="thShiftPuesto">Puesto</th><th>Sitio</th><th>Inicio</th><th>Fin</th><th>Estado</th><th></th>
         </tr></thead><tbody></tbody></table>
       </div>
       <div id="detail" class="panel hidden" style="margin-top:16px">
@@ -99,9 +99,9 @@
     <div id="tab-patrol" class="tab-panel hidden">
       <div class="panel">
         <h2>Reportes de recorrido</h2>
-        <p class="muted">Distancia GPS, marcas QR y lugares visitados por oficial — para área administrativa.</p>
+        <p class="muted">Distancia GPS, marcas QR y hora exacta por puesto — para área administrativa.</p>
         <div class="form-grid two-col" style="margin:12px 0">
-          <label>Oficial (opcional)<select id="patrolGuard"><option value="">Todos</option></select></label>
+          <label><span id="lblPatrolPuesto">Puesto</span> (opcional)<select id="patrolGuard"><option value="">Todos</option></select></label>
           <label>Período
             <select id="patrolPeriod">
               <option value="weekly">Semanal (7 días)</option>
@@ -220,23 +220,24 @@
     <div id="tab-oficiales" class="tab-panel hidden">
       <div class="panel">
         <h2>Recorrido en vivo (turnos abiertos)</h2>
-        <p class="muted">Cada celular trabaja con su código — el informe es solo del oficial en turno.</p>
+        <p class="muted">Cada celular = un puesto (ej. Lima1). El informe es de ese puesto, aunque cambie la persona.</p>
         <button class="btn btn-ghost" type="button" id="liveRefresh" style="margin-bottom:12px">Actualizar</button>
         <div id="livePatrol"></div>
       </div>
       <div class="panel" style="margin-top:16px">
-        <h2>Códigos por oficial</h2>
-        <p class="muted">Entrega el código o el link al celular del guardia. Cada uno entra en <strong>/oficial</strong> sin mezclar turnos.</p>
+        <h2 id="h2CodesPuesto">Códigos por puesto</h2>
+        <p class="muted">Entrega el código o el link al celular del puesto. Entrada en <strong>/oficial</strong> — sin mezclar turnos.</p>
         <div id="officialCodes"></div>
         <hr style="border-color:var(--border);margin:16px 0" />
-        <h3>Nuevo oficial + código</h3>
+        <h3 id="h3NewPuesto">Nuevo puesto + código</h3>
         <form id="officialForm" class="form-grid two-col">
-          <label>Nombre completo<input name="name" required /></label>
-          <label>Placa / badge<input name="badge" placeholder="OF-001" /></label>
-          <label>Usuario (respaldo)<input name="username" required autocomplete="off" /></label>
-          <label>Clave (respaldo)<input name="password" type="password" required minlength="8" /></label>
-          <label>Teléfono<input name="phone" placeholder="+506..." /></label>
-          <div class="full"><button class="btn btn-primary" type="submit">Crear oficial y generar código</button></div>
+          <label><span id="lblPostName">Nombre del puesto</span><input name="name" required placeholder="Lima1" /></label>
+          <label><span id="lblPostBadge">Referencia</span><input name="badge" placeholder="LIMA-1" /></label>
+          <label>Sitio del puesto<select name="client_site_id" id="officialSite"><option value="">— Seleccione —</option></select></label>
+          <label>Usuario (respaldo)<input name="username" required autocomplete="off" placeholder="lima1" /></label>
+          <label>Clave (respaldo)<input name="password" type="password" minlength="8" placeholder="Auto si vacío al usar comercial" /></label>
+          <label>Teléfono del puesto<input name="phone" placeholder="+506..." /></label>
+          <div class="full"><button class="btn btn-primary" type="submit" id="btnCreatePuesto">Crear puesto y generar código</button></div>
         </form>
       </div>
     </div>
@@ -249,7 +250,7 @@
         <h3>Nueva asignación</h3>
         <form id="assignForm" class="form-grid two-col">
           <label>Sitio<select name="site_id" id="sitePick"></select></label>
-          <label>Oficial<select name="guard_id" id="guardPick"></select></label>
+          <label><span id="lblAssignPuesto">Puesto</span><select name="guard_id" id="guardPick"></select></label>
           <label>Fecha<input name="shift_date" type="date" required /></label>
           <label>Inicio<input name="start_time" value="06:00" /></label>
           <label>Fin<input name="end_time" value="18:00" /></label>
@@ -336,10 +337,27 @@
       }
     });
 
+    let LBL = { guard_unit: "Puesto", guard_unit_plural: "Puestos" };
+    function applyProductLabels(lb) {
+      if (!lb) return;
+      LBL = { ...LBL, ...lb };
+      const u = LBL.guard_unit || "Puesto";
+      const up = LBL.guard_unit_plural || "Puestos";
+      const set = (id, t) => { const el = document.getElementById(id); if (el) el.textContent = t; };
+      set("tabBtnPuestos", up);
+      set("thShiftPuesto", u);
+      set("lblPatrolPuesto", u);
+      set("lblAssignPuesto", u);
+      set("h2CodesPuesto", `Códigos por ${u.toLowerCase()}`);
+      set("h3NewPuesto", `Nuevo ${u.toLowerCase()} + código`);
+      set("lblPostName", `Nombre del ${u.toLowerCase()}`);
+      set("btnCreatePuesto", `Crear ${u.toLowerCase()} y generar código`);
+    }
+
     async function loadDash() {
       const d = await api("/api/dashboard");
       document.getElementById("stats").innerHTML = `
-        <div class="stat"><span class="muted">Oficiales</span><b>${d.guards}</b></div>
+        <div class="stat"><span class="muted">${LBL.guard_unit_plural}</span><b>${d.guards}</b></div>
         <div class="stat"><span class="muted">Sitios</span><b>${d.sites}</b></div>
         <div class="stat"><span class="muted">Turnos abiertos</span><b>${d.open_shifts}</b></div>
         <div class="stat"><span class="muted">Cámaras</span><b>${d.cameras ?? 0}</b></div>
@@ -436,6 +454,8 @@
       document.getElementById("sitePick").innerHTML = opts || '<option value="">— Sin sitios —</option>';
       document.getElementById("qrSite").innerHTML = opts || '<option value="">— Sin sitios —</option>';
       document.getElementById("camSite").innerHTML = opts || '<option value="">— Sin sitios —</option>';
+      const offSite = document.getElementById("officialSite");
+      if (offSite) offSite.innerHTML = '<option value="">— Seleccione sitio —</option>' + opts;
       const noSite = sites.length === 0;
       document.getElementById("camNoSite").classList.toggle("hidden", !noSite);
       document.getElementById("camPanel").classList.toggle("hidden", noSite);
@@ -526,7 +546,7 @@
           <div class="stat"><span class="muted">Distancia total</span><b>${d.total_distance_label || "0 m"}</b></div>
         </div>
         <table class="table" style="margin-top:12px"><thead><tr>
-          <th>Oficial</th><th>Turnos</th><th>Marcas QR</th><th>Recorrido</th><th>Sitios</th>
+          <th>${LBL.guard_unit}</th><th>Turnos</th><th>Marcas QR</th><th>Recorrido</th><th>Sitios</th>
         </tr></thead><tbody>${(d.guards || []).map(g => `<tr>
           <td>${g.guard?.name}<br><span class="muted">${g.guard?.badge || ""}</span></td>
           <td>${g.shifts}</td><td>${g.checkpoint_marks}</td><td>${g.total_distance_label}</td>
@@ -536,7 +556,7 @@
     async function loadGuardPickers(guards) {
       const list = guards || (await api("/api/guards")).guards || [];
       const gopts = list.map(u => `<option value="${u.id}">${u.name}</option>`).join("");
-      document.getElementById("guardPick").innerHTML = gopts || '<option value="">— Sin oficiales —</option>';
+      document.getElementById("guardPick").innerHTML = gopts || `<option value="">— Sin ${LBL.guard_unit_plural.toLowerCase()} —</option>`;
       document.getElementById("patrolGuard").innerHTML = '<option value="">Todos</option>' + gopts;
       return list;
     }
@@ -548,6 +568,7 @@
         const link = origin + (u.field_login_path || `/oficial?code=${u.field_code}`);
         return `<div style="padding:14px 0;border-bottom:1px solid var(--border)">
           <strong>${u.name}</strong> ${u.badge ? `<span class="badge">${u.badge}</span>` : ""}
+          ${u.home_site_name ? `<br><span class="muted">Sitio: ${u.home_site_name}</span>` : ""}
           ${u.phone ? `<br><span class="muted">${u.phone}</span>` : ""}
           <div style="margin:10px 0;padding:12px;background:#0d1420;border-radius:10px;border:1px solid var(--border)">
             <span class="muted" style="font-size:.75rem">CÓDIGO CELULAR</span><br>
@@ -559,7 +580,7 @@
             <button class="btn btn-ghost" type="button" data-regen="${u.id}">Nuevo código</button>
           </div>
         </div>`;
-      }).join("") || "<p class='muted'>Sin oficiales. Cree el primero abajo.</p>";
+      }).join("") || `<p class='muted'>Sin ${LBL.guard_unit_plural.toLowerCase()}. Cree el primero abajo.</p>`;
       document.getElementById("officialCodes").querySelectorAll("[data-copy]").forEach(btn => {
         btn.onclick = () => {
           navigator.clipboard.writeText(btn.dataset.copy);
@@ -662,6 +683,10 @@
     };
 
     async function init() {
+      try {
+        const prod = await api("/api/product");
+        applyProductLabels(prod.labels);
+      } catch (_) {}
       const me = await api("/api/auth/me");
       document.getElementById("hello").textContent = `${me.user.name} · ${me.company.name}`;
       document.getElementById("setName").value = me.company.name || "";
@@ -831,10 +856,13 @@
       const fd = new FormData(e.target);
       const body = Object.fromEntries(fd);
       body.role = "guard";
+      if (body.client_site_id) body.client_site_id = Number(body.client_site_id);
+      else delete body.client_site_id;
+      if (!body.password) body.password = "Puesto" + Math.random().toString(36).slice(2, 10) + "!";
       const res = await api("/api/users", { method: "POST", body: JSON.stringify(body) });
       e.target.reset();
       await loadOfficialCodes();
-      alert(`Oficial creado.\nCódigo celular: ${res.user.field_code}\nLink: ${location.origin}${res.user.field_login_path || ""}`);
+      alert(`${LBL.guard_unit} creado.\nCódigo celular: ${res.user.field_code}\nLink: ${location.origin}${res.user.field_login_path || ""}`);
     };
     document.getElementById("liveRefresh").onclick = loadLivePatrol;
     document.getElementById("clientForm").onsubmit = async (e) => {

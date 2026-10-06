@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.company_logo import company_logo_path
 from app.config import COPYRIGHT, PRODUCT_NAME
+from app.terminology import labels as product_labels
 from app.geo import format_distance
 from app.helpers import ENTRY_LABELS, SEVERITY_LABELS, log_dict, shift_dict
 from app.models import Company, LogEntry, Shift
@@ -40,6 +41,19 @@ def shift_report_html(db: Session, shift_id: int, company_id: int) -> str:
         </tr>"""
     guard = data.get("guard") or {}
     site = data.get("site") or {}
+    lbl = product_labels()
+    unit = lbl["guard_unit"]
+    patrol = shift_patrol_stats(db, sh)
+    marks_html = ""
+    for m in patrol.get("marks") or []:
+        loc = f"{m['lat']:.5f}, {m['lng']:.5f}" if m.get("lat") is not None else "—"
+        dist = format_distance(m.get("distance_from_prev_m") or 0) if m.get("distance_from_prev_m") else "—"
+        marks_html += f"<li>{escape(m.get('time') or '')} · <strong>{escape(m.get('checkpoint') or '')}</strong> · {escape(loc)} · +{escape(dist)}</li>"
+    patrol_block = f"""
+<h2 style="margin-top:20px;font-size:1.1rem">Rondas y recorrido del turno</h2>
+<p class="meta">Recorrido GPS: <strong>{escape(patrol.get('total_distance_label') or '—')}</strong> ·
+Marcas QR: <strong>{patrol.get('checkpoint_marks') or 0}</strong></p>
+<ul>{marks_html or '<li>Sin marcas QR en este turno</li>'}</ul>"""
     logo_html = ""
     if company:
         lp = company_logo_path(company.id, company.logo_filename or "")
@@ -65,7 +79,7 @@ th{{background:#f0f4f8}}
 <h1>Bitácora de servicio — {escape(PRODUCT_NAME)}</h1>
 <p class="meta">
   <strong>{escape(company.name if company else "")}</strong><br>
-  Oficial: {escape(guard.get("name") or "")} ({escape(guard.get("badge") or "")})<br>
+  {escape(unit)}: {escape(guard.get("name") or "")} ({escape(guard.get("badge") or "")})<br>
   Sitio: {escape(site.get("name") or "")} — {escape(site.get("address") or "")}<br>
   Cliente: {escape(site.get("client_name") or "")}<br>
   Inicio: {escape(data.get("started_at") or "")} · Fin: {escape(data.get("ended_at") or "—")}
@@ -74,6 +88,7 @@ th{{background:#f0f4f8}}
 <thead><tr><th>Fecha/hora</th><th>Tipo</th><th>Prioridad</th><th>Detalle</th></tr></thead>
 <tbody>{rows}</tbody>
 </table>
+{patrol_block}
 <p class="meta" style="margin-top:20px">{escape(COPYRIGHT)}</p>
 </body></html>"""
 
@@ -82,6 +97,8 @@ def patrol_report_html(db: Session, company_id: int, *, days: int, guard_id: int
     company = db.query(Company).filter(Company.id == company_id).first()
     data = patrol_period_stats(db, company_id, days=days, guard_id=guard_id)
     period_label = "Semanal (7 días)" if days <= 7 else "Quincenal (15 días)"
+    unit = product_labels()["guard_unit"]
+    unit_plural = product_labels()["guard_unit_plural"]
 
     guard_rows = ""
     for g in data["guards"]:
@@ -135,11 +152,11 @@ Período: {escape(data.get("since") or "")} → {escape(data.get("until") or "")
 <div class="summary">
   <div><span class="muted">Turnos</span><br><strong>{data.get("shift_count") or 0}</strong></div>
   <div><span class="muted">Distancia total</span><br><strong>{escape(data.get("total_distance_label") or "")}</strong></div>
-  <div><span class="muted">Oficiales</span><br><strong>{len(data.get("guards") or [])}</strong></div>
+  <div><span class="muted">{escape(unit_plural)}</span><br><strong>{len(data.get("guards") or [])}</strong></div>
 </div>
-<h2>Resumen por oficial</h2>
+<h2>Resumen por {escape(unit.lower())}</h2>
 <table>
-<thead><tr><th>Oficial</th><th>Turnos</th><th>Marcas QR</th><th>Recorrido</th><th>Sitios</th></tr></thead>
+<thead><tr><th>{escape(unit)}</th><th>Turnos</th><th>Marcas QR</th><th>Recorrido</th><th>Sitios</th></tr></thead>
 <tbody>{guard_rows or "<tr><td colspan='5'>Sin datos en el período</td></tr>"}</tbody>
 </table>
 <h2>Detalle de marcas y recorrido</h2>

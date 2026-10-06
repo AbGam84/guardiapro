@@ -25,9 +25,13 @@ SEVERITY_LABELS = {
 }
 
 
-def user_dict(u: User | None) -> dict:
+def user_dict(u: User | None, db: Session | None = None) -> dict:
     if not u:
         return {}
+    home_site_name = ""
+    if u.client_site_id and db is not None:
+        site = db.query(ClientSite).filter(ClientSite.id == u.client_site_id).first()
+        home_site_name = site.name if site else ""
     return {
         "id": u.id,
         "name": u.name,
@@ -38,6 +42,7 @@ def user_dict(u: User | None) -> dict:
         "field_code": u.field_code or "",
         "company_id": u.company_id,
         "client_site_id": u.client_site_id,
+        "home_site_name": home_site_name,
     }
 
 
@@ -135,7 +140,7 @@ def shift_dict(db: Session, sh: Shift, *, include_logs: bool = True) -> dict:
         "start_lng": sh.start_lng,
         "end_lat": sh.end_lat,
         "end_lng": sh.end_lng,
-        "guard": user_dict(guard),
+        "guard": user_dict(guard, db),
         "site": site_dict(site),
         "log_count": len(logs),
         "logs": [log_dict(x) for x in logs],

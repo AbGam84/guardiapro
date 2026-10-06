@@ -70,6 +70,7 @@ class VendorUserIn(BaseModel):
     role: str = "guard"
     badge: str = ""
     phone: str = ""
+    client_site_id: int | None = None
 
 
 class VendorResetPasswordIn(BaseModel):
@@ -306,6 +307,15 @@ def vendor_create_user(
     if db.query(User).filter(User.username == uname).first():
         raise HTTPException(status_code=400, detail="Usuario ya existe globalmente")
     plain, generated = _plain_password_for_client(payload.password, payload.auto_password)
+    home_site = payload.client_site_id
+    if home_site:
+        site = (
+            db.query(ClientSite)
+            .filter(ClientSite.id == home_site, ClientSite.company_id == company.id)
+            .first()
+        )
+        if not site:
+            raise HTTPException(status_code=404, detail="Sitio no encontrado")
     row = User(
         company_id=company.id,
         name=payload.name.strip(),
@@ -314,6 +324,7 @@ def vendor_create_user(
         role=role,
         badge=payload.badge.strip(),
         phone=payload.phone.strip(),
+        client_site_id=home_site if role in ("guard", "client") else None,
     )
     db.add(row)
     db.flush()
