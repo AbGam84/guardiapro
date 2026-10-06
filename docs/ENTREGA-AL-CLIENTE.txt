@@ -1,0 +1,40 @@
+Excalibu Sentinel — qué enviarle a cada empresa de seguridad (cliente suyo)
+=============================================================================
+
+Usted vende una licencia mensual. El cliente recibe UNA URL propia; no comparte login genérico.
+
+1) URL (marca blanca en el login)
+   https://excalibu-sentinel.onrender.com/login?empresa=CODIGO
+   Ejemplo Grupo Gómez:
+   https://excalibu-sentinel.onrender.com/login?empresa=grupo-gomez
+
+   En esa pantalla debe verse:
+   · Logo del cliente
+   · Nombre legal / comercial
+   · Lema (ej. Seguridad privada)
+   · Teléfono / WhatsApp del cliente
+
+2) Credenciales del administrador (monitoreo)
+   · Usuario y clave que usted crea en /comercial → Nueva venta o Administradores
+   · Tras entrar → /admin (turnos, sitios, oficiales, reportes, bitácoras)
+
+3) Oficiales en celular (opcional al vender)
+   · Cada guardia: link /oficial?code=XXXXXX (código de 6 dígitos)
+   · No usa la URL del admin; es solo para ronda en campo
+
+Dónde lo arma usted (AbSol@r / distribuidor)
+--------------------------------------------
+Panel: https://excalibu-sentinel.onrender.com/comercial
+  · Nueva venta → empresa + admin + meses pagados
+  · Gestionar empresa → URL personalizada, subir logo, lema, teléfono
+  · Copiar URL / texto WhatsApp desde el panel
+
+Grupo Gómez (referencia)
+  Código: grupo-gomez
+  Logo: subir en panel comercial o scripts/upload_cloud_company_logo.py
+
+Si la URL no muestra logo todavía
+  Render debe publicar el código nuevo (Abrir-Render-Desplegar.bat).
+  El logo ya puede estar en servidor aunque la pantalla vieja no lo muestre con ?empresa=
+
+Contacto distribución: soporte@absolar.latam · WhatsApp +506 6370-6546

@@ -15,6 +15,7 @@ from app.config import (
     COMPANY_NAME,
     COPYRIGHT,
     PRODUCT_NAME,
+    PUBLIC_BASE_URL,
     SECRET_KEY,
     SUPPORT_WHATSAPP_DISPLAY,
     VENDOR_NAME,
@@ -48,6 +49,7 @@ class CompanyCreateIn(BaseModel):
     code: str = ""
     phone: str = ""
     alert_whatsapp: str = ""
+    brand_tagline: str = ""
     monthly_fee_crc: int = Field(default=58000, ge=0)
     max_officers: int = Field(default=10, ge=1, le=500)
     prepaid_months: int = Field(default=1, ge=1, le=36)
@@ -80,6 +82,13 @@ class VendorResetPasswordIn(BaseModel):
     password: str = Field(min_length=6)
 
 
+class VendorBrandIn(BaseModel):
+    name: str = ""
+    phone: str = ""
+    alert_whatsapp: str = ""
+    brand_tagline: str = ""
+
+
 def _plain_password_for_client(raw: str, auto: bool) -> tuple[str, bool]:
     """Devuelve (clave en claro, fue_generada)."""
     plain = (raw or "").strip()
@@ -96,19 +105,36 @@ def _plain_password_for_client(raw: str, auto: bool) -> tuple[str, bool]:
     return plain, False
 
 
+def _client_login_paths(company: Company) -> dict[str, str]:
+    code = company.code
+    login_path = f"/login?empresa={code}"
+    access_path = f"/acceso/{code}"
+    base = PUBLIC_BASE_URL.rstrip("/") if PUBLIC_BASE_URL else ""
+    return {
+        "company_code": code,
+        "client_login_path": login_path,
+        "client_access_path": access_path,
+        "client_login_url": f"{base}{login_path}" if base else login_path,
+        "client_access_url": f"{base}{access_path}" if base else access_path,
+    }
+
+
 def _client_credentials_block(company: Company, username: str, password: str, portal: str) -> dict:
     refresh_subscription_status(company)
     until = company.paid_until.isoformat() if company.paid_until else None
+    urls = _client_login_paths(company)
     return {
         "portal": portal,
-        "login_url": "/login",
+        "login_url": urls["client_login_path"],
         "username": username,
         "password": password,
         "company_code": company.code,
         "paid_until": until,
+        **urls,
         "note": (
-            "Entregue usuario y clave al cliente. Si la licencia vence, el login se bloquea; "
-            "al sumar meses pagados en este panel se reactiva sin cambiar usuario ni clave."
+            "Envíe al cliente la URL personalizada (logo y datos de su empresa en el login). "
+            "Tras entrar, opera en /admin (turnos, sitios, oficiales). Si la licencia vence, el login se bloquea; "
+            "al sumar meses pagados aquí se reactiva con el mismo usuario y clave."
         ),
     }
 
@@ -188,6 +214,7 @@ def vendor_create_company(payload: CompanyCreateIn, db: Session = Depends(get_db
         name=payload.name.strip(),
         phone=payload.phone.strip(),
         alert_whatsapp=payload.alert_whatsapp.strip(),
+        brand_tagline=(payload.brand_tagline or "Seguridad privada").strip()[:120],
         subscription_plan="monthly",
         monthly_fee_crc=int(payload.monthly_fee_crc),
         max_officers=int(payload.max_officers),
@@ -217,6 +244,34 @@ def vendor_create_company(payload: CompanyCreateIn, db: Session = Depends(get_db
         "admin": user_dict(admin),
         "credentials": creds,
         "message": f"Empresa «{company.name}» lista. Copie la clave y entréguela al cliente.",
+    }
+
+
+@router.patch("/companies/{company_id}/brand")
+def vendor_update_brand(
+    company_id: int,
+    payload: VendorBrandIn,
+    db: Session = Depends(get_db),
+    vendor=Depends(get_vendor),
+):
+    company = db.query(Company).filter(Company.id == company_id, Company.active.is_(True)).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Empresa no encontrada")
+    if payload.name.strip():
+        company.name = payload.name.strip()
+    if payload.phone.strip():
+        company.phone = payload.phone.strip()
+    if payload.alert_whatsapp.strip():
+        company.alert_whatsapp = payload.alert_whatsapp.strip()
+    if payload.brand_tagline.strip():
+        company.brand_tagline = payload.brand_tagline.strip()[:120]
+    db.commit()
+    db.refresh(company)
+    return {
+        "ok": True,
+        "company": company_dict(company),
+        "delivery": _client_login_paths(company),
+        "message": "Marca actualizada. El login del cliente muestra logo, nombre, lema y teléfono.",
     }
 
 

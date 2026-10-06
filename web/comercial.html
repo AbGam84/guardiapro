@@ -55,15 +55,17 @@
     <div id="tab-venta" class="tab-panel">
       <div id="emptyCommercialHint" class="panel hidden" style="margin-bottom:16px;border-color:rgba(18,196,160,.45);background:rgba(18,196,160,.06)">
         <h2 style="margin-top:0">Sin empresas clientes aún</h2>
-        <p class="muted" style="margin:0">Complete el formulario de abajo para crear la <strong>primera empresa administrativa</strong>. Luego el cliente entra en <a href="/login">/login</a> con el usuario admin que defina aquí.</p>
+        <p class="muted" style="margin:0">Complete el formulario de abajo. Al vender recibirá una <strong>URL personalizada</strong> (<code>/login?empresa=código</code>) con logo y datos del cliente; ahí el administrador entra a monitorear oficiales en <strong>/admin</strong>.</p>
       </div>
       <div class="panel">
         <h2>Vender licencia — nueva empresa de seguridad</h2>
         <p class="muted">Crea la empresa y el primer administrador. El cliente opera en <strong>/admin</strong> (no aquí).</p>
         <form id="coForm" class="form-grid two-col">
           <label class="full">Nombre empresa cliente<input name="name" required placeholder="Seguridad El Roble S.A." /></label>
-          <label>Código (opcional)<input name="code" placeholder="el-roble" /></label>
-          <label>WhatsApp alertas<input name="alert_whatsapp" placeholder="+506 6370-6546" /></label>
+          <label>Código URL (opcional)<input name="code" placeholder="grupo-gomez" title="Aparece en la URL que envía al cliente" /></label>
+          <label>Teléfono visible en login<input name="phone" placeholder="+506 6070 9197" /></label>
+          <label>WhatsApp alertas<input name="alert_whatsapp" placeholder="50660709197" /></label>
+          <label class="full">Lema en login (marca)<input name="brand_tagline" placeholder="Seguridad privada" /></label>
           <label>Cuota mensual (₡ CRC)<input name="monthly_fee_crc" type="number" value="58000" min="0" /></label>
           <label>Máx. oficiales<input name="max_officers" type="number" value="10" min="1" max="500" /></label>
           <label>Meses pagados al inicio (1 = un mes)<input name="prepaid_months" type="number" value="1" min="1" max="36" title="Tras vencer, el cliente no entra hasta sumar meses en Licencia mensual" /></label>
@@ -85,6 +87,30 @@
     </div>
 
     <div id="tab-empresa" class="tab-panel hidden">
+      <div class="panel" id="clientDeliveryPanel" style="border-color:rgba(255,176,32,.45);background:rgba(255,176,32,.06)">
+        <h2 style="margin-top:0">Entrega al cliente — URL personalizada</h2>
+        <p class="muted">Esta es la página que usted vende: logo, nombre, lema y teléfono de <em>su</em> cliente. El administrador entra con usuario/clave y monitorea oficiales en <strong>/admin</strong>.</p>
+        <p id="clientUrlLine" class="code-box" style="text-align:left;font-size:.88rem">Seleccione una empresa abajo.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+          <button class="btn btn-primary" type="button" id="btnOpenClientLogin" disabled>Abrir login del cliente</button>
+          <button class="btn btn-ghost" type="button" id="btnCopyClientUrl" disabled>Copiar URL</button>
+          <button class="btn btn-ghost" type="button" id="btnCopyWhatsApp" disabled>Copiar texto WhatsApp</button>
+        </div>
+        <hr style="border-color:var(--border);margin:16px 0" />
+        <h3>Marca en el login</h3>
+        <form id="brandForm" class="form-grid two-col">
+          <label>Nombre en pantalla<input name="name" /></label>
+          <label>Lema<input name="brand_tagline" placeholder="Seguridad privada" /></label>
+          <label>Teléfono login<input name="phone" placeholder="+506 6070 9197" /></label>
+          <label>WhatsApp<input name="alert_whatsapp" placeholder="50660709197" /></label>
+          <div class="full"><button class="btn btn-primary" type="submit">Guardar marca</button></div>
+        </form>
+        <form id="logoForm" class="form-grid" style="margin-top:12px">
+          <label>Logo del cliente (PNG/JPG, máx. 4 MB)<input name="file" type="file" accept="image/*" required /></label>
+          <div><button class="btn btn-ghost" type="submit">Subir logo al login</button></div>
+        </form>
+        <p class="muted" id="brandPreviewHint" style="margin-top:8px">—</p>
+      </div>
       <div class="panel">
         <h2>Empresa del cliente</h2>
         <label>Seleccionar empresa<select id="companyPick"></select></label>
@@ -210,20 +236,79 @@
     wireAutoPass("adminAutoPass", "adminPassWrap");
     wireAutoPass("guardAutoPass", "guardPassWrap");
 
-    function renderClientCredentials(creds) {
+    function clientLoginUrl(code) {
+      return `${origin()}/login?empresa=${encodeURIComponent(code || "")}`;
+    }
+
+    function whatsAppDeliveryText(companyName, creds) {
+      const url = creds.client_login_url && creds.client_login_url.startsWith("http")
+        ? creds.client_login_url
+        : clientLoginUrl(creds.company_code);
+      const pwd = creds.password || "";
+      return (
+        `*${companyName}* — Excalibu Sentinel\n\n` +
+        `Entrada (logo y datos de su empresa):\n${url}\n\n` +
+        `Usuario: ${creds.username}\nClave: ${pwd}\n\n` +
+        `Desde ahí administra turnos, sitios y oficiales. Guarde esta clave.`
+      );
+    }
+
+    function renderClientCredentials(creds, companyName) {
       if (!creds) return "";
       const until = creds.paid_until
         ? new Date(creds.paid_until).toLocaleDateString("es-CR")
         : "—";
       const pwd = (creds.password || "").replace(/</g, "");
+      const url = clientLoginUrl(creds.company_code);
       return `<strong>Entregue al cliente (copie tal cual):</strong><br>
-        · Entrada: <code>${origin()}/login?empresa=${encodeURIComponent(creds.company_code || "")}</code><br>
-        · Usuario: <code>${creds.username}</code><br>
+        · <strong>URL personalizada:</strong> <code>${url}</code><br>
+        · Usuario admin: <code>${creds.username}</code><br>
         · Clave: <code style="font-size:1.05rem;color:var(--gold)">${pwd}</code>
-        ${creds.password_generated ? " <span class='muted'>(generada por el sistema)</span>" : ""}<br>
-        · Código empresa: <code>${creds.company_code}</code> (opcional en login)<br>
+        ${creds.password_generated ? " <span class='muted'>(generada — solo se muestra una vez)</span>" : ""}<br>
+        · Tras login → panel <code>/admin</code> (monitoreo de oficiales)<br>
         · Licencia pagada hasta: <strong>${until}</strong><br>
         <span class="muted">${creds.note || ""}</span>`;
+    }
+
+    let lastDeliveryCreds = null;
+    let lastDeliveryCompanyName = "";
+
+    function updateClientDeliveryPanel(company, admins) {
+      const urlEl = document.getElementById("clientUrlLine");
+      const openBtn = document.getElementById("btnOpenClientLogin");
+      const copyBtn = document.getElementById("btnCopyClientUrl");
+      const waBtn = document.getElementById("btnCopyWhatsApp");
+      const hint = document.getElementById("brandPreviewHint");
+      const bf = document.getElementById("brandForm");
+      if (!company || !company.code) {
+        urlEl.textContent = "Seleccione una empresa.";
+        [openBtn, copyBtn, waBtn].forEach(b => { b.disabled = true; });
+        return;
+      }
+      const url = clientLoginUrl(company.code);
+      urlEl.innerHTML = `<span class="muted" style="font-size:.72rem">URL PARA WHATSAPP / CORREO</span><br><code style="font-size:.95rem;word-break:break-all">${url}</code>`;
+      openBtn.disabled = copyBtn.disabled = waBtn.disabled = false;
+      openBtn.onclick = () => window.open(url, "_blank");
+      copyBtn.onclick = () => { navigator.clipboard.writeText(url); copyBtn.textContent = "Copiado"; setTimeout(() => { copyBtn.textContent = "Copiar URL"; }, 2000); };
+      const admin = (admins && admins[0]) || null;
+      lastDeliveryCompanyName = company.name || company.code;
+      lastDeliveryCreds = admin ? { username: admin.username, password: "", company_code: company.code } : { company_code: company.code };
+      waBtn.onclick = () => {
+        const pwd = prompt("Pegue la clave del admin (si no la tiene, restablezca clave abajo):", "") || "";
+        const text = whatsAppDeliveryText(lastDeliveryCompanyName, { ...lastDeliveryCreds, password: pwd });
+        navigator.clipboard.writeText(text);
+        waBtn.textContent = "Texto copiado";
+        setTimeout(() => { waBtn.textContent = "Copiar texto WhatsApp"; }, 2000);
+      };
+      if (bf) {
+        bf.name.value = company.name || "";
+        bf.brand_tagline.value = company.brand_tagline || "Seguridad privada";
+        bf.phone.value = company.phone || "";
+        bf.alert_whatsapp.value = company.alert_whatsapp || "";
+      }
+      hint.textContent = company.has_logo
+        ? "Logo cargado — se ve en el login del cliente."
+        : "Suba el logo arriba antes de enviar la URL al cliente.";
     }
 
     document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
@@ -339,6 +424,7 @@
           loadCompanyDetail(selectedCompanyId);
         };
       });
+      updateClientDeliveryPanel(d.company, d.admins);
     }
 
     async function showApp() {
@@ -404,6 +490,8 @@
         name: fd.get("name"),
         code: fd.get("code") || "",
         alert_whatsapp: fd.get("alert_whatsapp") || "",
+        phone: fd.get("phone") || "",
+        brand_tagline: fd.get("brand_tagline") || "Seguridad privada",
         monthly_fee_crc: Number(fd.get("monthly_fee_crc") || 58000),
         max_officers: Number(fd.get("max_officers") || 10),
         prepaid_months: Number(fd.get("prepaid_months") || 1),
@@ -417,7 +505,7 @@
         const creds = { ...(d.credentials || {}), password: d.credentials?.password || adminPassword };
         const box = document.getElementById("coResult");
         box.classList.remove("hidden");
-        box.innerHTML = `<strong>${d.message}</strong><br><br>${renderClientCredentials(creds)}`;
+        box.innerHTML = `<strong>${d.message}</strong><br><br>${renderClientCredentials(creds, d.company?.name)}`;
         e.target.reset();
         await showApp();
       } catch (ex) {
@@ -447,9 +535,44 @@
       const creds = { ...(d.credentials || {}), password: d.credentials?.password || pwd };
       const box = document.getElementById("adminResult");
       box.classList.remove("hidden");
-      box.innerHTML = `<strong>${d.message}</strong><br><br>${renderClientCredentials(creds)}`;
+      box.innerHTML = `<strong>${d.message}</strong><br><br>${renderClientCredentials(creds, d.company?.name)}`;
       e.target.reset();
       loadCompanyDetail(selectedCompanyId);
+    };
+
+    document.getElementById("brandForm").onsubmit = async (e) => {
+      e.preventDefault();
+      if (!selectedCompanyId) { alert("Seleccione empresa"); return; }
+      const fd = new FormData(e.target);
+      await vapi(`/api/vendor/companies/${selectedCompanyId}/brand`, {
+        method: "PATCH",
+        body: JSON.stringify(Object.fromEntries(fd)),
+      });
+      alert("Marca guardada");
+      await showApp();
+      loadCompanyDetail(selectedCompanyId);
+    };
+
+    document.getElementById("logoForm").onsubmit = async (e) => {
+      e.preventDefault();
+      if (!selectedCompanyId) { alert("Seleccione empresa"); return; }
+      try {
+        const fd = new FormData(e.target);
+        const file = fd.get("file");
+        if (!file || !file.size) { alert("Seleccione imagen"); return; }
+        const body = new FormData();
+        body.append("file", file);
+        const h = {};
+        if (vTok()) h.Authorization = "Bearer " + vTok();
+        const r = await fetch(`/api/vendor/companies/${selectedCompanyId}/logo`, { method: "POST", headers: h, body });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(formatApiError(data.detail, r.status));
+        alert("Logo subido — ya aparece en el login del cliente");
+        e.target.reset();
+        loadCompanyDetail(selectedCompanyId);
+      } catch (ex) {
+        alert(ex.message);
+      }
     };
 
     document.getElementById("guardForm").onsubmit = async (e) => {
@@ -479,7 +602,7 @@
       box.classList.remove("hidden");
       box.innerHTML = `<strong>${d.message}</strong><br>
         Código celular: <code style="font-size:1.2rem;color:var(--gold)">${u.field_code}</code><br>
-        Link: <code>${link}</code><br>${renderClientCredentials(guardCreds)}`;
+        Link: <code>${link}</code><br>${renderClientCredentials(guardCreds, d.company?.name || "")}`;
       e.target.reset();
       loadCompanyDetail(selectedCompanyId);
     };
