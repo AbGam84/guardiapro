@@ -1,8 +1,14 @@
 """Páginas HTML — app operativa y marketing."""
 
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+import json
+import re
 
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from sqlalchemy.orm import Session
+
+from app.database import get_db
+from app.models import Company
 from app.paths import WEB, WEB_MARKETING
 
 router = APIRouter(tags=["pages"])
@@ -13,6 +19,43 @@ def _html(relative: str) -> HTMLResponse:
     if not path.exists():
         raise HTTPException(status_code=404, detail="Página no encontrada")
     return HTMLResponse(path.read_text(encoding="utf-8"))
+
+
+def _safe_company_code(raw: str | None) -> str:
+    code = (raw or "").strip().lower()
+    if not code or not re.fullmatch(r"[a-z0-9-]+", code):
+        return ""
+    return code
+
+
+def _login_html(request: Request, db: Session) -> HTMLResponse:
+    path = WEB / "login.html"
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Página no encontrada")
+    content = path.read_text(encoding="utf-8")
+    code = _safe_company_code(request.query_params.get("empresa") or request.query_params.get("code"))
+    if code and db.query(Company).filter(Company.code == code, Company.active.is_(True)).first():
+        inject = f"""
+<script id="excalibu-brand-prefill">
+(function(){{
+  function run(){{
+    var c = {json.dumps(code)};
+    var ci = document.querySelector('input[name="company_code"]');
+    if (ci) {{ ci.value = c; var det = ci.closest('details'); if (det) det.open = true; }}
+    if (typeof refreshClientBrand === "function") {{ refreshClientBrand(c); return; }}
+    if (typeof applyBranding === "function") {{
+      fetch("/api/branding/" + encodeURIComponent(c))
+        .then(function(r) {{ return r.ok ? r.json() : null; }})
+        .then(function(b) {{ if (b) applyBranding(b); }});
+    }}
+  }}
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", run);
+  else setTimeout(run, 0);
+}})();
+</script>
+"""
+        content = content.replace("</body>", inject + "\n</body>")
+    return HTMLResponse(content, headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
 
 
 def _marketing(name: str) -> HTMLResponse:
@@ -32,13 +75,13 @@ def web_alias(page: str):
 
 
 @router.get("/")
-def root():
-    return FileResponse(WEB / "login.html")
+def root(request: Request, db: Session = Depends(get_db)):
+    return _login_html(request, db)
 
 
 @router.get("/login")
-def page_login():
-    return _html("login.html")
+def page_login(request: Request, db: Session = Depends(get_db)):
+    return _login_html(request, db)
 
 
 @router.get("/guardia")

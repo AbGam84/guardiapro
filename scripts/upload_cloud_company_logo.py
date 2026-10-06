@@ -66,9 +66,15 @@ def main() -> None:
     user = os.getenv("GUARDIA_CLOUD_ADMIN_USER") or "admin.gomez"
     pwd = os.getenv("GUARDIA_SYNC_ADMIN_PASSWORD") or os.getenv("GUARDIA_CLOUD_ADMIN_PASSWORD") or ""
     code = (sys.argv[1] if len(sys.argv) > 1 else "grupo-gomez").strip().lower()
-    logo = ROOT / "web" / "static" / "clients" / f"{code.replace('_', '-')}-logo.jpeg"
-    if not logo.is_file():
-        logo = ROOT / "web" / "static" / "clients" / "grupo-gomez-logo.jpeg"
+    if len(sys.argv) > 2:
+        logo = Path(sys.argv[2]).expanduser().resolve()
+    else:
+        logo = ROOT / "web" / "static" / "clients" / f"{code.replace('_', '-')}-logo.jpeg"
+        if not logo.is_file():
+            logo = ROOT / "web" / "static" / "clients" / "grupo-gomez-logo.jpeg"
+    desktop = Path.home() / "OneDrive" / "Escritorio" / "logo de empresa seguridad.jpeg"
+    if not logo.is_file() and desktop.is_file():
+        logo = desktop
     if not pwd:
         print("Falta GUARDIA_SYNC_ADMIN_PASSWORD en push-cloud.env", file=sys.stderr)
         sys.exit(1)
