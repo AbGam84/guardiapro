@@ -1,13 +1,20 @@
 Si /login sigue con Excalibu y /api/health muestra build: 20260929
 ====================================================================
 
+CAUSA FRECUENTE: un deploy viejo quedó "In progress" y bloquea los nuevos pushes.
+
 1. Render Dashboard → excalibu-sentinel → Deploys
    Si hay un deploy "In progress" hace más de 10 min → Cancel deploy.
+   (Abrir: Abrir-Render-Desplegar.bat)
 
 2. Environment → borre GUARDIA_BUILD si está fijo en 20260929
    (así /api/health muestra el commit real).
 
 3. Manual Deploy → Deploy latest commit (rama main).
+   O: Settings → Deploy Hook → pegue URL en push-cloud.env como RENDER_DEPLOY_HOOK
+      y ejecute: python scripts/trigger_render_deploy.py
+
+4. Código en GitHub (main) ya incluye /health/live para que Render no falle el deploy.
 
 4. Cuando diga Live, pruebe (Ctrl+F5):
    https://excalibu-sentinel.onrender.com/login?empresa=grupo-gomez
