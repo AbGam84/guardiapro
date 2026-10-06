@@ -300,7 +300,8 @@
         <h2>Empresa</h2>
         <form id="setForm" class="form-grid">
           <label>Nombre<input name="name" id="setName" /></label>
-          <label>Teléfono<input name="phone" id="setPhone" /></label>
+          <label>Lema en login (ej. Seguridad privada)<input name="brand_tagline" id="setTagline" placeholder="Seguridad privada" /></label>
+          <label>Teléfono visible en login<input name="phone" id="setPhone" placeholder="+506 6070 9197" /></label>
           <label>WhatsApp alertas incidentes<input name="alert_whatsapp" id="setWa" placeholder="+506..." /></label>
           <button class="btn btn-primary" type="submit">Guardar</button>
         </form>
@@ -690,6 +691,8 @@
       const me = await api("/api/auth/me");
       document.getElementById("hello").textContent = `${me.user.name} · ${me.company.name}`;
       document.getElementById("setName").value = me.company.name || "";
+      const tagEl = document.getElementById("setTagline");
+      if (tagEl) tagEl.value = me.company.brand_tagline || "";
       document.getElementById("setPhone").value = me.company.phone || "";
       document.getElementById("setWa").value = me.company.alert_whatsapp || "";
       applyCompanyBrand(me.company);
