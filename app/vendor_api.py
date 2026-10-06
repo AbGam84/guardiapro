@@ -25,7 +25,7 @@ from app.database import get_db
 from app.field_codes import generate_field_code
 from app.helpers import company_dict, user_dict
 from app.models import ClientSite, Company, Shift, User
-from app.subscription import assert_can_add_guard, extend_paid_until
+from app.subscription import assert_can_add_guard, extend_paid_until, refresh_subscription_status
 
 router = APIRouter(prefix="/api/vendor", tags=["vendor"])
 
@@ -110,6 +110,9 @@ def vendor_login(payload: VendorLoginIn):
 @router.get("/overview")
 def vendor_overview(db: Session = Depends(get_db), vendor=Depends(get_vendor)):
     companies = db.query(Company).filter(Company.active.is_(True)).order_by(Company.id.desc()).all()
+    for c in companies:
+        refresh_subscription_status(c)
+    db.commit()
     guards = db.query(User).filter(User.role == "guard", User.active.is_(True)).count()
     admins = db.query(User).filter(User.role == "admin", User.active.is_(True)).count()
     open_shifts = db.query(Shift).filter(Shift.status == "open").count()

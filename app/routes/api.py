@@ -35,7 +35,7 @@ from app.company_logo import (
     save_company_logo,
 )
 from app.deps import client_site_id, ensure_site_access, get_company, public_base, whatsapp_link
-from app.subscription import assert_can_add_guard, assert_subscription_active
+from app.subscription import assert_can_add_guard, assert_subscription_active, refresh_subscription_status
 from app.field_codes import generate_field_code
 from app.geo import format_distance, haversine_m
 from app.helpers import (
@@ -155,6 +155,8 @@ def login(payload: LoginIn, db: Session = Depends(get_db)):
             status_code=401,
             detail=f"Código de empresa incorrecto. Use «{company.code}» o deje el campo vacío.",
         )
+    refresh_subscription_status(company)
+    db.commit()
     assert_subscription_active(company)
     token = create_access_token(
         {"sub": user.username, "role": user.role, "company_id": user.company_id, "company_code": company.code}
@@ -183,6 +185,8 @@ def login_field_code(payload: FieldCodeLoginIn, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=401, detail="Código de oficial incorrecto")
     company = get_company(db, user)
+    refresh_subscription_status(company)
+    db.commit()
     assert_subscription_active(company)
     token = create_access_token(
         {"sub": user.username, "role": user.role, "company_id": user.company_id, "company_code": company.code}

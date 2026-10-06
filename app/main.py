@@ -12,7 +12,13 @@ from app.paths import WEB
 from app.routes import register_routes
 from app.field_codes import generate_field_code
 from app.models import User
-from app.seed import ensure_admin_access, migrate_demo_to_clean, purge_demo_cameras, seed_if_empty
+from app.seed import (
+    ensure_admin_access,
+    ensure_grupo_gomez_client,
+    migrate_demo_to_clean,
+    purge_demo_cameras,
+    seed_if_empty,
+)
 
 
 @asynccontextmanager
@@ -25,6 +31,7 @@ async def lifespan(app: FastAPI):
         migrate_demo_to_clean(db)
         purge_demo_cameras(db)
         ensure_admin_access(db)
+        ensure_grupo_gomez_client(db)
         guards_no_code = (
             db.query(User)
             .filter(User.role == "guard", User.active.is_(True), User.field_code == "")

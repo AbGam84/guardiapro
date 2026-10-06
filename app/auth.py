@@ -56,6 +56,10 @@ def get_current_user(
     if not user:
         raise HTTPException(status_code=401, detail="Usuario no encontrado")
     company = get_company(db, user)
+    from app.subscription import refresh_subscription_status
+
+    refresh_subscription_status(company)
+    db.commit()
     assert_subscription_active(company)
     return user
 

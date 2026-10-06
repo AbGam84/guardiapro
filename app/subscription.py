@@ -32,9 +32,18 @@ def subscription_public(company: Company) -> dict:
     }
 
 
+def refresh_subscription_status(company: Company) -> None:
+    """Marca moroso cuando pasó paid_until (licencia mensual)."""
+    if not company.paid_until:
+        return
+    if company.paid_until < utcnow() and (company.subscription_status or "").lower() != "suspended":
+        company.subscription_status = "past_due"
+
+
 def subscription_allows_access(company: Company) -> bool:
     if not company.active:
         return False
+    refresh_subscription_status(company)
     status = (company.subscription_status or "active").lower()
     if status == "suspended":
         return False

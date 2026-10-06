@@ -1,7 +1,11 @@
 """Datos iniciales — producción limpia (sin demo)."""
+from pathlib import Path
+
 from sqlalchemy.orm import Session
 
 from app.auth import hash_password, verify_password
+from app.company_logo import company_logo_path, save_company_logo
+from app.subscription import extend_paid_until
 from app.config import (
     ADMIN_NAME,
     ADMIN_PASSWORD,
@@ -20,9 +24,14 @@ from app.models import (
     Shift,
     ShiftAssignment,
     User,
+    utcnow,
 )
 
 COMPANY_CODE = "excalibu-telecom"
+GRUPO_GOMEZ_CODE = "grupo-gomez"
+GRUPO_GOMEZ_LOGO = Path(__file__).resolve().parents[1] / "data" / "brand" / "grupo-gomez-logo.jpeg"
+GRUPO_GOMEZ_ADMIN_USER = "admin.grupogomez"
+GRUPO_GOMEZ_ADMIN_PASS = "Gomez2026!"
 _DEMO_CODES = {"demo-seguridad", "demo"}
 _DEMO_USERNAMES = {"juan", "maria", "cliente", "supervisor"}
 
@@ -117,6 +126,61 @@ def seed_if_empty(db: Session) -> None:
             badge="ADM-001",
         )
     )
+    db.commit()
+
+
+def ensure_grupo_gomez_client(db: Session) -> None:
+    """Cliente referencia mensual — logo en repo para Render y demo comercial."""
+    if not GRUPO_GOMEZ_LOGO.is_file():
+        return
+    company = db.query(Company).filter(Company.code == GRUPO_GOMEZ_CODE).first()
+    if not company:
+        company = Company(
+            code=GRUPO_GOMEZ_CODE,
+            name="Grupo Gómez y Asociados",
+            alert_whatsapp=SUPPORT_WHATSAPP,
+            subscription_plan="monthly",
+            monthly_fee_crc=58000,
+            max_officers=10,
+            subscription_status="active",
+        )
+        extend_paid_until(company, 1)
+        db.add(company)
+        db.flush()
+    else:
+        company.name = "Grupo Gómez y Asociados"
+        company.subscription_plan = "monthly"
+        if not company.monthly_fee_crc:
+            company.monthly_fee_crc = 58000
+        if not company.paid_until or company.paid_until < utcnow():
+            extend_paid_until(company, 1)
+        elif company.subscription_status == "suspended":
+            company.subscription_status = "active"
+
+    if not company.logo_filename or not company_logo_path(company.id, company.logo_filename or ""):
+        company.logo_filename = save_company_logo(
+            company.id, GRUPO_GOMEZ_LOGO.read_bytes(), GRUPO_GOMEZ_LOGO.name
+        )
+
+    admin = db.query(User).filter(User.username == GRUPO_GOMEZ_ADMIN_USER).first()
+    pwd = hash_password(GRUPO_GOMEZ_ADMIN_PASS)
+    if not admin:
+        db.add(
+            User(
+                company_id=company.id,
+                name="Administrador Grupo Gómez",
+                username=GRUPO_GOMEZ_ADMIN_USER,
+                password_hash=pwd,
+                role="admin",
+                badge="ADM-GG",
+            )
+        )
+    else:
+        admin.company_id = company.id
+        admin.active = True
+        admin.role = "admin"
+        if not verify_password(GRUPO_GOMEZ_ADMIN_PASS, admin.password_hash):
+            admin.password_hash = pwd
     db.commit()
 
 

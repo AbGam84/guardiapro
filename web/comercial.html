@@ -20,7 +20,7 @@
     </div>
     <div class="comercial-badge">Panel comercial · no es admin operativo</div>
     <h1 style="text-align:center">Excalibu <span class="brand-accent">Comercial</span></h1>
-    <p class="muted">Vender licencias · crear empresas · administradores · códigos de oficial</p>
+        <p class="muted">Vender licencias mensuales · crear empresa + administrador del cliente · renovar cada mes</p>
     <form id="vLogin" class="form-grid">
       <label>Usuario comercial<input name="username" required autocomplete="username" /></label>
       <label>Clave<input name="password" type="password" required autocomplete="current-password" /></label>
@@ -62,7 +62,7 @@
           <label>WhatsApp alertas<input name="alert_whatsapp" placeholder="+506 6370-6546" /></label>
           <label>Cuota mensual (₡ CRC)<input name="monthly_fee_crc" type="number" value="58000" min="0" /></label>
           <label>Máx. oficiales<input name="max_officers" type="number" value="10" min="1" max="500" /></label>
-          <label>Meses pagados al inicio<input name="prepaid_months" type="number" value="1" min="1" max="36" /></label>
+          <label>Meses pagados al inicio (1 = un mes)<input name="prepaid_months" type="number" value="1" min="1" max="36" title="Tras vencer, el cliente no entra hasta sumar meses en Licencia mensual" /></label>
           <label>Nombre administrador<input name="admin_name" value="Administrador" /></label>
           <label>Usuario admin<input name="admin_username" value="admin" required /></label>
           <label>Clave admin<input name="admin_password" type="password" minlength="6" required placeholder="Mínimo 6 caracteres" /></label>
@@ -105,7 +105,7 @@
 
       <div class="panel" style="margin-top:16px">
         <h2>Administradores del cliente</h2>
-        <p class="muted">Usuarios que entran a <strong>/admin</strong> para operar turnos, sitios y reportes.</p>
+        <p class="muted">Cree aquí el usuario que entrega al cliente para <strong>/admin</strong> (turnos, sitios, logo, reportes). Sin renovación mensual, el login queda bloqueado.</p>
         <div id="adminList"></div>
         <hr style="border-color:var(--border);margin:16px 0" />
         <h3>Crear administrador</h3>
@@ -208,6 +208,11 @@
         opts || '<option value="">— Sin empresas —</option>';
       if (!selectedCompanyId && companies[0]) selectedCompanyId = companies[0].id;
       if (selectedCompanyId) document.getElementById("companyPick").value = String(selectedCompanyId);
+      const gg = companies.find(c => c.code === "grupo-gomez");
+      if (gg && !selectedCompanyId) {
+        selectedCompanyId = gg.id;
+        document.getElementById("companyPick").value = String(gg.id);
+      }
     }
 
     async function loadCompanyDetail(id) {
