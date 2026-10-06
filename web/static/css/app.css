@@ -35,6 +35,18 @@ a { color: var(--teal); }
 }
 
 .login-wrap { max-width: 440px; margin: 8vh auto; }
+.partner-strip {
+  margin: 12px 0 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 176, 32, 0.45);
+  background: linear-gradient(135deg, rgba(255, 176, 32, 0.12), rgba(18, 196, 160, 0.08));
+  text-align: center;
+}
+.partner-logo { display: block; margin: 0 auto 8px; height: 32px; width: auto; max-width: 160px; }
+.partner-text { margin: 0 0 6px; font-size: 0.78rem; color: var(--muted); font-weight: 600; }
+.partner-links { margin: 0; font-size: 0.76rem; line-height: 1.45; }
+.partner-links a { color: var(--gold); font-weight: 700; }
 .brand-head { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
 .brand-logo {
   border-radius: 22px;

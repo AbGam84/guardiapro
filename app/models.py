@@ -19,6 +19,11 @@ class Company(Base):
     phone: Mapped[str] = mapped_column(String(40), default="")
     alert_whatsapp: Mapped[str] = mapped_column(String(40), default="")
     logo_filename: Mapped[str] = mapped_column(String(255), default="")
+    subscription_plan: Mapped[str] = mapped_column(String(32), default="monthly")
+    monthly_fee_crc: Mapped[int] = mapped_column(Integer, default=58000)
+    max_officers: Mapped[int] = mapped_column(Integer, default=10)
+    subscription_status: Mapped[str] = mapped_column(String(24), default="active")
+    paid_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 

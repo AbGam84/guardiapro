@@ -61,4 +61,4 @@ Ver `PASO-A-PASO-RENDER.txt`.
 - Mensual (hasta 20 oficiales): ₡55.000 – ₡85.000
 - Paquete cámaras + WiFi + Sentinel: cotización integrada
 
-**Excalibu Telecom CR** · WhatsApp +506 6370-6546
+**AbSol@r Costa Rica** (distribución Excalibu Sentinel) · WhatsApp +506 6370-6546 · soporte@absolar.latam

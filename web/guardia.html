@@ -12,9 +12,12 @@
 <body>
   <div class="shell">
     <div class="topbar">
-      <div>
-        <h1>Bitácora</h1>
-        <p class="muted" id="hello">—</p>
+      <div style="display:flex;align-items:center;gap:10px">
+        <img id="topLogo" alt="" style="max-height:44px;display:none;border-radius:6px" />
+        <div>
+          <h1>Bitácora</h1>
+          <p class="muted" id="hello">—</p>
+        </div>
       </div>
       <button class="btn btn-ghost" id="logout" type="button">Salir</button>
     </div>
@@ -415,6 +418,11 @@
     async function init() {
       const me = await api("/api/auth/me");
       document.getElementById("hello").textContent = `${me.user.name} · ${me.user.badge} · ${me.company.name}`;
+      if (me.company?.logo_url) {
+        const img = document.getElementById("topLogo");
+        img.src = me.company.logo_url + "&t=" + Date.now();
+        img.style.display = "block";
+      }
       if (me.assignments_today?.length) {
         document.getElementById("assignBox").classList.remove("hidden");
         document.getElementById("assignList").innerHTML = me.assignments_today.map(a =>

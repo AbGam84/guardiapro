@@ -29,7 +29,7 @@ ADMIN_NAME = _env("GUARDIA_ADMIN_NAME", "Administrador")
 
 VENDOR_USERNAME = _env("GUARDIA_VENDOR_USER", "vendor")
 VENDOR_PASSWORD = _env("GUARDIA_VENDOR_PASSWORD", "GuardiaVendor2026!")
-VENDOR_NAME = _env("GUARDIA_VENDOR_NAME", "Excalibu Telecom Comercial")
+VENDOR_NAME = _env("GUARDIA_VENDOR_NAME", "AbSol@r Comercial")
 
 HOST = _env("HOST", "0.0.0.0")
 PORT = int(_env("PORT", "8097"))
@@ -41,11 +41,16 @@ if PUBLIC_BASE_URL and not PUBLIC_BASE_URL.startswith("http"):
 
 PRODUCT_NAME = "Excalibu Sentinel"
 PRODUCT_SHORT = "Excalibu"
-COMPANY_NAME = _env("GUARDIA_COMPANY_NAME", "Excalibu Telecom CR")
-COMPANY_TAGLINE = "Distribuidor e instalador · Cámaras · WiFi · Internet"
+COMPANY_NAME = _env("GUARDIA_COMPANY_NAME", "AbSol@r Costa Rica")
+COMPANY_TAGLINE = "Distribución · instalación · cámaras · WiFi · empresas de seguridad"
 SLOGAN = "Su guardia cuida el sitio. Excalibu cuida al guardia."
 TAGLINE = "Bitácora, QR, GPS, cámaras y reportes · Costa Rica"
-COPYRIGHT = f"© {COMPANY_NAME} · Excalibu Sentinel · Costa Rica"
+COPYRIGHT = f"© {COMPANY_NAME} · {PRODUCT_NAME} · Costa Rica"
+SUPPORT_EMAIL = _env("GUARDIA_SUPPORT_EMAIL", "soporte@absolar.latam")
 SUPPORT_WHATSAPP = _env("GUARDIA_SUPPORT", "+50663706546")
 SUPPORT_WHATSAPP_DISPLAY = _env("GUARDIA_SUPPORT_DISPLAY", "+506 6370-6546")
+ABSOLAR_WEB = _env("ABSOLAR_WEB", "https://absolar.onrender.com/web/")
+ABSOLAR_SEGURIDAD_URL = _env(
+    "ABSOLAR_SEGURIDAD_URL", "https://absolar.onrender.com/web/seguridad.html"
+)
 SHOW_DEMO_HINTS = _env("GUARDIA_SHOW_DEMO", "0" if IS_PRODUCTION else "1") in {"1", "true", "yes"}

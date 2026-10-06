@@ -10,7 +10,9 @@ from sqlalchemy.orm import Session
 
 from app.config import ACCESS_TOKEN_HOURS, SECRET_KEY
 from app.database import get_db
+from app.deps import get_company
 from app.models import User
+from app.subscription import assert_subscription_active
 
 ALGORITHM = "HS256"
 security = HTTPBearer(auto_error=False)
@@ -53,6 +55,8 @@ def get_current_user(
     user = db.query(User).filter(User.username == username, User.active.is_(True)).first()
     if not user:
         raise HTTPException(status_code=401, detail="Usuario no encontrado")
+    company = get_company(db, user)
+    assert_subscription_active(company)
     return user
 
 

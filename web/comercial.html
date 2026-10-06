@@ -60,6 +60,9 @@
           <label class="full">Nombre empresa cliente<input name="name" required placeholder="Seguridad El Roble S.A." /></label>
           <label>Código (opcional)<input name="code" placeholder="el-roble" /></label>
           <label>WhatsApp alertas<input name="alert_whatsapp" placeholder="+506 6370-6546" /></label>
+          <label>Cuota mensual (₡ CRC)<input name="monthly_fee_crc" type="number" value="58000" min="0" /></label>
+          <label>Máx. oficiales<input name="max_officers" type="number" value="10" min="1" max="500" /></label>
+          <label>Meses pagados al inicio<input name="prepaid_months" type="number" value="1" min="1" max="36" /></label>
           <label>Nombre administrador<input name="admin_name" value="Administrador" /></label>
           <label>Usuario admin<input name="admin_username" value="admin" required /></label>
           <label>Clave admin<input name="admin_password" type="password" minlength="6" required placeholder="Mínimo 6 caracteres" /></label>
@@ -78,6 +81,26 @@
         <h2>Empresa del cliente</h2>
         <label>Seleccionar empresa<select id="companyPick"></select></label>
         <p class="muted" id="companyHint" style="margin-top:8px">—</p>
+      </div>
+
+      <div class="panel" style="margin-top:16px">
+        <h2>Licencia mensual</h2>
+        <p class="muted" id="subHint">Seleccione empresa arriba.</p>
+        <form id="subForm" class="form-grid two-col">
+          <label>Cuota ₡/mes<input name="monthly_fee_crc" type="number" min="0" /></label>
+          <label>Máx. oficiales<input name="max_officers" type="number" min="1" max="500" /></label>
+          <label>Estado
+            <select name="subscription_status">
+              <option value="">— Sin cambiar —</option>
+              <option value="active">Activa</option>
+              <option value="trial">Prueba</option>
+              <option value="past_due">Moroso</option>
+              <option value="suspended">Suspendida</option>
+            </select>
+          </label>
+          <label>Sumar meses pagados<input name="add_months" type="number" value="0" min="0" max="36" /></label>
+          <div class="full"><button class="btn btn-primary" type="submit">Guardar licencia</button></div>
+        </form>
       </div>
 
       <div class="panel" style="margin-top:16px">
@@ -164,12 +187,15 @@
     };
 
     function renderCompaniesList() {
-      document.getElementById("coList").innerHTML = companies.map(c =>
-        `<div style="padding:10px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
-          <div><strong>${c.name}</strong><br><span class="muted">código: ${c.code}</span></div>
+      document.getElementById("coList").innerHTML = companies.map(c => {
+        const sub = c.subscription || {};
+        const fee = (sub.monthly_fee_crc || 0).toLocaleString("es-CR");
+        const until = sub.paid_until ? new Date(sub.paid_until).toLocaleDateString("es-CR") : "—";
+        return `<div style="padding:10px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+          <div><strong>${c.name}</strong><br><span class="muted">código: ${c.code} · ₡${fee}/mes · hasta ${until}</span></div>
           <button class="btn btn-ghost" type="button" data-pick="${c.id}">Gestionar</button>
-        </div>`
-      ).join("") || "<p class='muted'>Sin empresas — cree la primera arriba.</p>";
+        </div>`;
+      }).join("") || "<p class='muted'>Sin empresas — cree la primera arriba.</p>";
       document.getElementById("coList").querySelectorAll("[data-pick]").forEach(btn => {
         btn.onclick = () => {
           selectedCompanyId = Number(btn.dataset.pick);
@@ -188,8 +214,17 @@
       if (!id) return;
       const d = await vapi(`/api/vendor/companies/${id}`);
       selectedCompanyId = id;
+      const sub = d.company.subscription || {};
       document.getElementById("companyHint").textContent =
         `${d.company.name} · ${d.sites_count} sitios · ${d.open_shifts} turnos abiertos · código ${d.company.code}`;
+      document.getElementById("subHint").textContent =
+        `Estado: ${sub.subscription_status || "—"} · ₡${(sub.monthly_fee_crc || 0).toLocaleString("es-CR")}/mes · ` +
+        `oficiales máx. ${sub.max_officers || 10} · pagado hasta ${sub.paid_until ? new Date(sub.paid_until).toLocaleDateString("es-CR") : "—"}`;
+      const sf = document.getElementById("subForm");
+      sf.monthly_fee_crc.value = sub.monthly_fee_crc || 58000;
+      sf.max_officers.value = sub.max_officers || 10;
+      sf.add_months.value = 0;
+      sf.subscription_status.value = "";
 
       document.getElementById("adminList").innerHTML = [...(d.admins || []), ...(d.supervisors || [])].map(u =>
         `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
@@ -252,12 +287,34 @@
       if (selectedCompanyId) loadCompanyDetail(selectedCompanyId);
     };
 
+    document.getElementById("subForm").onsubmit = async (e) => {
+      e.preventDefault();
+      if (!selectedCompanyId) { alert("Seleccione empresa"); return; }
+      const fd = new FormData(e.target);
+      const body = {
+        monthly_fee_crc: Number(fd.get("monthly_fee_crc")),
+        max_officers: Number(fd.get("max_officers")),
+        subscription_status: fd.get("subscription_status") || "",
+        add_months: Number(fd.get("add_months") || 0),
+      };
+      await vapi(`/api/vendor/companies/${selectedCompanyId}/subscription`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      });
+      alert("Licencia actualizada");
+      await showApp();
+      loadCompanyDetail(selectedCompanyId);
+    };
+
     document.getElementById("coForm").onsubmit = async (e) => {
       e.preventDefault();
       const err = document.getElementById("vErr");
       err.classList.add("hidden");
       const fd = new FormData(e.target);
       const body = Object.fromEntries(fd.entries());
+      body.monthly_fee_crc = Number(body.monthly_fee_crc || 58000);
+      body.max_officers = Number(body.max_officers || 10);
+      body.prepaid_months = Number(body.prepaid_months || 1);
       try {
         const d = await vapi("/api/vendor/companies", { method: "POST", body: JSON.stringify(body) });
         const c = d.credentials || {};

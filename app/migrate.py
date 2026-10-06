@@ -94,3 +94,21 @@ def ensure_schema(engine: Engine) -> None:
         from app.models import CameraPairToken  # noqa: F401
 
         Base.metadata.create_all(bind=engine, tables=[CameraPairToken.__table__])
+
+    if "companies" in tables:
+        cols = {c["name"] for c in insp.get_columns("companies")}
+        dialect = engine.dialect.name
+        with engine.begin() as conn:
+            if "subscription_plan" not in cols:
+                conn.execute(text("ALTER TABLE companies ADD COLUMN subscription_plan VARCHAR(32) DEFAULT 'monthly'"))
+            if "monthly_fee_crc" not in cols:
+                if dialect == "sqlite":
+                    conn.execute(text("ALTER TABLE companies ADD COLUMN monthly_fee_crc INTEGER DEFAULT 58000"))
+                else:
+                    conn.execute(text("ALTER TABLE companies ADD COLUMN monthly_fee_crc INTEGER DEFAULT 58000"))
+            if "max_officers" not in cols:
+                conn.execute(text("ALTER TABLE companies ADD COLUMN max_officers INTEGER DEFAULT 10"))
+            if "subscription_status" not in cols:
+                conn.execute(text("ALTER TABLE companies ADD COLUMN subscription_status VARCHAR(24) DEFAULT 'active'"))
+            if "paid_until" not in cols:
+                conn.execute(text("ALTER TABLE companies ADD COLUMN paid_until DATETIME"))

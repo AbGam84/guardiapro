@@ -10,7 +10,10 @@
 <body>
   <div class="shell">
     <div class="topbar">
-      <div><h1>Centro de control</h1><p class="muted" id="hello">—</p></div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <img id="topLogo" alt="" style="max-height:48px;display:none;border-radius:6px" />
+        <div><h1>Centro de control</h1><p class="muted" id="hello">—</p></div>
+      </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <a class="btn btn-ghost" href="/guardia">Vista oficial</a>
         <button class="btn btn-ghost" id="logout">Salir</button>
@@ -272,7 +275,27 @@
     </div>
 
     <div id="tab-settings" class="tab-panel hidden">
-      <div class="panel">
+      <div class="panel" id="licPanel">
+        <h2>Licencia mensual</h2>
+        <p class="muted" id="licSummary">—</p>
+        <p class="muted" style="font-size:.82rem">Renovación y cobro: AbSol@r Costa Rica · WhatsApp +506 6370-6546 · soporte@absolar.latam</p>
+      </div>
+      <div class="panel" style="margin-top:16px">
+        <h2>Marca de su empresa</h2>
+        <p class="muted">Logo en login, app del oficial, portal cliente e informes PDF.</p>
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:12px 0">
+          <img id="setLogoPreview" alt="" style="max-height:72px;max-width:200px;display:none;border-radius:8px;background:#0d1420;padding:6px" />
+          <div>
+            <input type="file" id="setLogoFile" accept="image/png,image/jpeg,image/webp" />
+            <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+              <button class="btn btn-primary" type="button" id="setLogoUpload">Subir logo</button>
+              <button class="btn btn-ghost" type="button" id="setLogoRemove" style="display:none">Quitar logo</button>
+            </div>
+            <p class="muted" id="setLogoMsg" style="font-size:.78rem;margin-top:6px"></p>
+          </div>
+        </div>
+      </div>
+      <div class="panel" style="margin-top:16px">
         <h2>Empresa</h2>
         <form id="setForm" class="form-grid">
           <label>Nombre<input name="name" id="setName" /></label>
@@ -592,11 +615,59 @@
       ).join("") || "<p class='muted'>Sin usuarios cliente. Cree uno abajo (requiere sitio).</p>";
     }
 
+    function applyCompanyBrand(co) {
+      const img = document.getElementById("topLogo");
+      if (co?.logo_url) {
+        img.src = co.logo_url + "&t=" + Date.now();
+        img.style.display = "block";
+        const prev = document.getElementById("setLogoPreview");
+        prev.src = img.src;
+        prev.style.display = "block";
+        document.getElementById("setLogoRemove").style.display = "inline-block";
+      } else {
+        img.style.display = "none";
+        document.getElementById("setLogoPreview").style.display = "none";
+        document.getElementById("setLogoRemove").style.display = "none";
+      }
+      const sub = co?.subscription || {};
+      const fee = (sub.monthly_fee_crc || 0).toLocaleString("es-CR");
+      const until = sub.paid_until ? fmt(sub.paid_until) : "sin vencimiento (legacy)";
+      const st = sub.is_operational ? "Activa" : "Vencida / suspendida";
+      document.getElementById("licSummary").innerHTML =
+        `<strong>${st}</strong> · Cuota referencia: ₡${fee}/mes · Hasta: ${until}<br>` +
+        `Oficiales: ${sub.guards_used != null ? sub.guards_used : "—"} / ${sub.max_officers || 10}`;
+    }
+
+    document.getElementById("setLogoUpload").onclick = async () => {
+      const f = document.getElementById("setLogoFile").files[0];
+      const msg = document.getElementById("setLogoMsg");
+      if (!f) { msg.textContent = "Elija una imagen"; return; }
+      const fd = new FormData();
+      fd.append("file", f);
+      const r = await fetch("/api/company/logo", {
+        method: "POST",
+        headers: { Authorization: "Bearer " + getToken() },
+        body: fd,
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) { msg.textContent = data.detail || "Error al subir"; return; }
+      msg.textContent = "Logo actualizado";
+      applyCompanyBrand(data.company);
+    };
+    document.getElementById("setLogoRemove").onclick = async () => {
+      if (!confirm("¿Quitar logo de la empresa?")) return;
+      const data = await api("/api/company/logo", { method: "DELETE" });
+      document.getElementById("setLogoMsg").textContent = "Logo eliminado";
+      applyCompanyBrand(data.company);
+    };
+
     async function init() {
       const me = await api("/api/auth/me");
       document.getElementById("hello").textContent = `${me.user.name} · ${me.company.name}`;
       document.getElementById("setName").value = me.company.name || "";
+      document.getElementById("setPhone").value = me.company.phone || "";
       document.getElementById("setWa").value = me.company.alert_whatsapp || "";
+      applyCompanyBrand(me.company);
       document.querySelector('[name="shift_date"]').value = new Date().toISOString().slice(0, 10);
       await loadCamMeta();
       await loadOfficialCodes();

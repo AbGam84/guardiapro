@@ -25,6 +25,7 @@ from app.database import get_db
 from app.field_codes import generate_field_code
 from app.helpers import company_dict, user_dict
 from app.models import ClientSite, Company, Shift, User
+from app.subscription import assert_can_add_guard, extend_paid_until
 
 router = APIRouter(prefix="/api/vendor", tags=["vendor"])
 
@@ -39,9 +40,19 @@ class CompanyCreateIn(BaseModel):
     code: str = ""
     phone: str = ""
     alert_whatsapp: str = ""
+    monthly_fee_crc: int = Field(default=58000, ge=0)
+    max_officers: int = Field(default=10, ge=1, le=500)
+    prepaid_months: int = Field(default=1, ge=1, le=36)
     admin_name: str = "Administrador"
     admin_username: str = "admin"
     admin_password: str = Field(min_length=6)
+
+
+class VendorSubscriptionIn(BaseModel):
+    monthly_fee_crc: int | None = Field(default=None, ge=0)
+    max_officers: int | None = Field(default=None, ge=1, le=500)
+    subscription_status: str = ""
+    add_months: int = Field(default=0, ge=0, le=36)
 
 
 class VendorUserIn(BaseModel):
@@ -128,7 +139,12 @@ def vendor_create_company(payload: CompanyCreateIn, db: Session = Depends(get_db
         name=payload.name.strip(),
         phone=payload.phone.strip(),
         alert_whatsapp=payload.alert_whatsapp.strip(),
+        subscription_plan="monthly",
+        monthly_fee_crc=int(payload.monthly_fee_crc),
+        max_officers=int(payload.max_officers),
+        subscription_status="active",
     )
+    extend_paid_until(company, payload.prepaid_months)
     db.add(company)
     db.flush()
     admin = User(
@@ -156,6 +172,30 @@ def vendor_create_company(payload: CompanyCreateIn, db: Session = Depends(get_db
         },
         "message": f"Empresa «{company.name}» lista para operar.",
     }
+
+
+@router.patch("/companies/{company_id}/subscription")
+def vendor_update_subscription(
+    company_id: int,
+    payload: VendorSubscriptionIn,
+    db: Session = Depends(get_db),
+    vendor=Depends(get_vendor),
+):
+    company = db.query(Company).filter(Company.id == company_id, Company.active.is_(True)).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Empresa no encontrada")
+    if payload.monthly_fee_crc is not None:
+        company.monthly_fee_crc = int(payload.monthly_fee_crc)
+    if payload.max_officers is not None:
+        company.max_officers = int(payload.max_officers)
+    status = (payload.subscription_status or "").strip().lower()
+    if status in ("active", "trial", "past_due", "suspended"):
+        company.subscription_status = status
+    if payload.add_months:
+        extend_paid_until(company, payload.add_months)
+    db.commit()
+    db.refresh(company)
+    return {"ok": True, "company": company_dict(company)}
 
 
 @router.get("/companies/{company_id}")
@@ -205,6 +245,8 @@ def vendor_create_user(
     role = (payload.role or "guard").strip().lower()
     if role not in ("admin", "supervisor", "guard"):
         raise HTTPException(status_code=400, detail="Rol inválido")
+    if role == "guard":
+        assert_can_add_guard(db, company)
     uname = payload.username.strip().lower()
     if db.query(User).filter(User.username == uname).first():
         raise HTTPException(status_code=400, detail="Usuario ya existe globalmente")

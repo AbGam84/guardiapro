@@ -11,9 +11,11 @@
 <body>
   <div class="login-wrap panel">
     <div class="brand-head">
-      <img src="/static/excalibu-mark.png?v=5" alt="Excalibu Sentinel — seguridad y rondas" class="brand-logo" width="104" height="104" />
+      <img id="clientLogo" alt="" class="brand-logo hidden" width="104" height="104" style="object-fit:contain;background:#0d1420;border-radius:12px;padding:6px" />
+      <img id="defaultMark" src="/static/excalibu-mark.png?v=5" alt="Excalibu Sentinel — seguridad y rondas" class="brand-logo" width="104" height="104" />
       <div>
-        <h1>Excalibu <span class="brand-accent">Sentinel</span></h1>
+        <h1 id="brandTitle">Excalibu <span class="brand-accent">Sentinel</span></h1>
+        <p class="muted hidden" id="clientBrandName" style="margin:4px 0 0;font-size:.85rem"></p>
       </div>
     </div>
     <blockquote class="brand-slogan brand-slogan-compact">
@@ -21,6 +23,15 @@
       <span class="slogan-line slogan-line-accent"><span class="word-excalibu">Excalibu</span> cuida al guardia.</span>
     </blockquote>
     <p class="brand-tagline">Bitácora · QR · GPS · Cámaras · Costa Rica</p>
+    <div class="partner-strip" aria-label="Distribuidor AbSol@r">
+      <img src="/static/absolar-logo.png?v=1" alt="AbSol@r Costa Rica" class="partner-logo" width="132" height="32" />
+      <p class="partner-text">Distribución e instalación · Huacas / Guanacaste</p>
+      <p class="partner-links">
+        <a href="https://wa.me/50663706546" target="_blank" rel="noopener">WhatsApp +506 6370-6546</a>
+        ·
+        <a href="https://absolar.onrender.com/web/seguridad.html" target="_blank" rel="noopener">Cotizar cámaras + Sentinel</a>
+      </p>
+    </div>
     <form id="loginForm" class="form-grid">
       <label>Usuario<input name="username" required autocomplete="username" /></label>
       <label>Clave<input name="password" type="password" required autocomplete="current-password" /></label>
@@ -38,6 +49,47 @@
   </div>
   <script src="/static/js/api.js"></script>
   <script>
+    let brandTimer = null;
+    async function refreshClientBrand(code) {
+      const c = (code || "").trim().toLowerCase();
+      const clientLogo = document.getElementById("clientLogo");
+      const defaultMark = document.getElementById("defaultMark");
+      const nameEl = document.getElementById("clientBrandName");
+      if (!c) {
+        clientLogo.classList.add("hidden");
+        defaultMark.classList.remove("hidden");
+        nameEl.classList.add("hidden");
+        return;
+      }
+      try {
+        const r = await fetch("/api/branding/" + encodeURIComponent(c));
+        if (!r.ok) throw new Error();
+        const b = await r.json();
+        if (b.name) {
+          nameEl.textContent = b.name;
+          nameEl.classList.remove("hidden");
+        }
+        if (b.logo_url) {
+          clientLogo.src = b.logo_url + "&t=" + Date.now();
+          clientLogo.classList.remove("hidden");
+          defaultMark.classList.add("hidden");
+        } else {
+          clientLogo.classList.add("hidden");
+          defaultMark.classList.remove("hidden");
+        }
+      } catch {
+        clientLogo.classList.add("hidden");
+        defaultMark.classList.remove("hidden");
+      }
+    }
+    const codeInput = document.querySelector('input[name="company_code"]');
+    if (codeInput) {
+      codeInput.addEventListener("input", () => {
+        clearTimeout(brandTimer);
+        brandTimer = setTimeout(() => refreshClientBrand(codeInput.value), 400);
+      });
+    }
+
     document.getElementById("loginForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const err = document.getElementById("err");

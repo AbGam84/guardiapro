@@ -1,7 +1,9 @@
 from sqlalchemy.orm import Session
 
 from app.camera_util import BRANDS, CAMERA_TYPES, build_rtsp_url, build_web_url
+from app.company_logo import company_logo_url
 from app.models import ClientSite, Company, LogEntry, PatrolCheckpoint, SecurityCamera, Shift, ShiftAssignment, User
+from app.subscription import subscription_public
 
 ENTRY_LABELS = {
     "inicio": "Inicio de turno",
@@ -39,17 +41,23 @@ def user_dict(u: User | None) -> dict:
     }
 
 
-def company_dict(c: Company | None) -> dict:
+def company_dict(c: Company | None, *, include_subscription: bool = True) -> dict:
     if not c:
         return {}
-    return {
+    logo_url = company_logo_url(c.id, c.logo_filename or "")
+    out = {
         "id": c.id,
         "code": c.code,
         "name": c.name,
         "phone": c.phone,
         "alert_whatsapp": c.alert_whatsapp,
         "active": c.active,
+        "logo_url": logo_url,
+        "has_logo": bool(logo_url),
     }
+    if include_subscription:
+        out["subscription"] = subscription_public(c)
+    return out
 
 
 def site_dict(s: ClientSite | None) -> dict:

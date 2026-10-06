@@ -1,0 +1,36 @@
+Excalibu Sentinel — licencia mensual + logo por cliente
+=========================================================
+
+MODELO DE NEGOCIO
+-----------------
+- Cada empresa de seguridad paga una mensualidad (referencia ₡58.000/mes, hasta 10 oficiales).
+- AbSol@r vende y renueva desde /comercial (panel vendor).
+- Si la licencia vence, login y API responden 402 con mensaje de renovación.
+
+PANEL COMERCIAL (/comercial)
+----------------------------
+Nueva venta:
+  - Cuota mensual (CRC)
+  - Máximo de oficiales
+  - Meses pagados al crear (paid_until)
+
+Gestionar empresa → Licencia mensual:
+  - Ajustar cuota y cupo de oficiales
+  - Estado: active | trial | past_due | suspended
+  - Sumar meses pagados (renovación)
+
+CLIENTE (/admin → Ajustes)
+-------------------------
+- Ve estado de licencia (solo lectura).
+- Sube logo PNG/JPG/WebP (máx. 4 MB) → marca en login, app oficial, PDF.
+
+API útil
+--------
+GET  /api/branding/{codigo_empresa}     — nombre + logo (público)
+GET  /api/company/logo?company_id=N     — imagen logo
+POST /api/company/logo                  — admin, multipart file
+PATCH /api/vendor/companies/{id}/subscription — panel comercial
+
+Empresas antiguas sin paid_until: siguen activas (legacy).
+
+Contacto: soporte@absolar.latam · WhatsApp +506 6370-6546

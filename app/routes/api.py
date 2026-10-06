@@ -6,18 +6,21 @@ from typing import Annotated
 
 import aiofiles
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
 from app.auth import create_access_token, get_current_user, hash_password, require_roles, verify_password
 from app.camera_util import BRANDS, CAMERA_TYPES
 from app.config import (
+    ABSOLAR_SEGURIDAD_URL,
+    ABSOLAR_WEB,
     COPYRIGHT,
     COMPANY_NAME,
     COMPANY_TAGLINE,
     IS_PRODUCTION,
     PRODUCT_NAME,
     SHOW_DEMO_HINTS,
+    SUPPORT_EMAIL,
     SUPPORT_WHATSAPP,
     SUPPORT_WHATSAPP_DISPLAY,
     SLOGAN,
@@ -25,7 +28,14 @@ from app.config import (
     UPLOADS_DIR,
 )
 from app.database import get_db
+from app.company_logo import (
+    company_logo_path,
+    delete_company_logo,
+    logo_media_type,
+    save_company_logo,
+)
 from app.deps import client_site_id, ensure_site_access, get_company, public_base, whatsapp_link
+from app.subscription import assert_can_add_guard, assert_subscription_active
 from app.field_codes import generate_field_code
 from app.geo import format_distance, haversine_m
 from app.helpers import (
@@ -42,6 +52,7 @@ from app.helpers import (
 )
 from app.models import (
     ClientSite,
+    Company,
     LogEntry,
     PatrolCheckpoint,
     PatrolMissedAlert,
@@ -102,6 +113,10 @@ def product():
         "tagline": TAGLINE,
         "copyright": COPYRIGHT,
         "support_display": SUPPORT_WHATSAPP_DISPLAY,
+        "support_email": SUPPORT_EMAIL,
+        "distributor": COMPANY_NAME,
+        "absolar_web": ABSOLAR_WEB,
+        "absolar_seguridad_url": ABSOLAR_SEGURIDAD_URL,
         "whatsapp_url": f"https://wa.me/{wa_digits}",
         "differentiators": [
             "Meta-capa: audita la operación de su propia empresa de seguridad",
@@ -126,12 +141,21 @@ def login(payload: LoginIn, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Usuario o clave incorrectos")
     company = get_company(db, user)
     code = (payload.company_code or "").strip().lower()
-    legacy_codes = {"demo-seguridad", "demo", "guardiapro", "excalibu", "excalibu-telecom"}
+    legacy_codes = {
+        "demo-seguridad",
+        "demo",
+        "guardiapro",
+        "excalibu",
+        "excalibu-telecom",
+        "absolar",
+        "absolar-cr",
+    }
     if code and company.code != code and code not in legacy_codes:
         raise HTTPException(
             status_code=401,
             detail=f"Código de empresa incorrecto. Use «{company.code}» o deje el campo vacío.",
         )
+    assert_subscription_active(company)
     token = create_access_token(
         {"sub": user.username, "role": user.role, "company_id": user.company_id, "company_code": company.code}
     )
@@ -159,6 +183,7 @@ def login_field_code(payload: FieldCodeLoginIn, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=401, detail="Código de oficial incorrecto")
     company = get_company(db, user)
+    assert_subscription_active(company)
     token = create_access_token(
         {"sub": user.username, "role": user.role, "company_id": user.company_id, "company_code": company.code}
     )
@@ -168,6 +193,66 @@ def login_field_code(payload: FieldCodeLoginIn, db: Session = Depends(get_db)):
         "user": user_dict(user),
         "company": company_dict(company),
     }
+
+
+@router.get("/api/branding/{company_code}")
+def public_branding(company_code: str, db: Session = Depends(get_db)):
+    code = (company_code or "").strip().lower()
+    if not code:
+        raise HTTPException(status_code=404, detail="Empresa no encontrada")
+    company = db.query(Company).filter(Company.code == code, Company.active.is_(True)).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Empresa no encontrada")
+    return {
+        "code": company.code,
+        "name": company.name,
+        "logo_url": company_dict(company, include_subscription=False).get("logo_url") or "",
+        "has_logo": bool(company.logo_filename or company_logo_path(company.id, "")),
+    }
+
+
+@router.get("/api/company/logo")
+def serve_company_logo(company_id: int, db: Session = Depends(get_db)):
+    cid = company_id
+    if not cid:
+        raise HTTPException(status_code=404, detail="Sin logo")
+    company = db.query(Company).filter(Company.id == cid, Company.active.is_(True)).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Empresa no encontrada")
+    path = company_logo_path(company.id, company.logo_filename or "")
+    if not path:
+        raise HTTPException(status_code=404, detail="Sin logo")
+    return FileResponse(path, media_type=logo_media_type(path), headers={"Cache-Control": "no-store"})
+
+
+@router.post("/api/company/logo")
+async def upload_company_logo(
+    user: Annotated[User, Depends(require_roles("admin"))],
+    db: Session = Depends(get_db),
+    file: UploadFile = File(...),
+):
+    company = get_company(db, user)
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Suba una imagen (PNG, JPG o WebP)")
+    content = await file.read()
+    if len(content) > 4 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Máximo 4 MB")
+    fname = save_company_logo(company.id, content, file.filename or "logo.png")
+    company.logo_filename = fname
+    db.commit()
+    return {"ok": True, "company": company_dict(company)}
+
+
+@router.delete("/api/company/logo")
+def remove_company_logo(
+    user: Annotated[User, Depends(require_roles("admin"))],
+    db: Session = Depends(get_db),
+):
+    company = get_company(db, user)
+    delete_company_logo(company.id)
+    company.logo_filename = ""
+    db.commit()
+    return {"ok": True, "company": company_dict(company)}
 
 
 @router.get("/api/auth/me")
@@ -192,9 +277,15 @@ def me(user: Annotated[User, Depends(get_current_user)], db: Session = Depends(g
             .all()
         )
         my_assignments = [assignment_dict(db, a) for a in rows]
+    co = company_dict(company)
+    co["subscription"]["guards_used"] = (
+        db.query(User)
+        .filter(User.company_id == company.id, User.role == "guard", User.active.is_(True))
+        .count()
+    )
     return {
         "user": user_dict(user),
-        "company": company_dict(company),
+        "company": co,
         "open_shift": shift_dict(db, open_shift) if open_shift else None,
         "assignments_today": my_assignments,
     }
@@ -1412,6 +1503,9 @@ def create_user(
         )
         if not site:
             raise HTTPException(status_code=404, detail="Sitio no encontrado")
+    company = get_company(db, user)
+    if payload.role == "guard":
+        assert_can_add_guard(db, company)
     row = User(
         company_id=user.company_id,
         name=payload.name.strip(),

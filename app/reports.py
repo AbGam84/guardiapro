@@ -2,6 +2,7 @@ from html import escape
 
 from sqlalchemy.orm import Session
 
+from app.company_logo import company_logo_path
 from app.config import COPYRIGHT, PRODUCT_NAME
 from app.geo import format_distance
 from app.helpers import ENTRY_LABELS, SEVERITY_LABELS, log_dict, shift_dict
@@ -39,6 +40,14 @@ def shift_report_html(db: Session, shift_id: int, company_id: int) -> str:
         </tr>"""
     guard = data.get("guard") or {}
     site = data.get("site") or {}
+    logo_html = ""
+    if company:
+        lp = company_logo_path(company.id, company.logo_filename or "")
+        if lp:
+            logo_html = (
+                f'<img src="/api/company/logo?company_id={company.id}" '
+                f'alt="{escape(company.name)}" style="max-height:56px;margin-bottom:8px" />'
+            )
     return f"""<!DOCTYPE html>
 <html lang="es"><head><meta charset="UTF-8"/>
 <title>Bitácora turno #{sh.id}</title>
@@ -52,6 +61,7 @@ th{{background:#f0f4f8}}
 @media print{{button{{display:none}}}}
 </style></head><body>
 <button onclick="window.print()">Imprimir / PDF</button>
+{logo_html}
 <h1>Bitácora de servicio — {escape(PRODUCT_NAME)}</h1>
 <p class="meta">
   <strong>{escape(company.name if company else "")}</strong><br>
