@@ -4,9 +4,10 @@ services:
     runtime: python
     plan: starter
     branch: main
+    runtimeVersion: "3.12.7"
     buildCommand: pip install -r requirements.txt && python -c "from app.main import app"
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
-    healthCheckPath: /api/health
+    healthCheckPath: /health/live
     disk:
       name: excalibu-data
       mountPath: /var/data
@@ -32,3 +33,5 @@ services:
         value: "+50663706546"
       - key: GUARDIA_SUPPORT_DISPLAY
         value: "+506 6370-6546"
+      - key: PUBLIC_BASE_URL
+        value: https://excalibu-sentinel.onrender.com

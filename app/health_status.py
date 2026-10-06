@@ -95,7 +95,7 @@ def build_health_payload() -> dict:
         checks["persistent_storage"] = "ok" if persistent else "fail"
         checks["secret_key"] = "ok" if secret_ok else "warn"
 
-    ok = db_ok and data_writable and uploads_ok and (not IS_PRODUCTION or persistent)
+    ok = db_ok and data_writable and uploads_ok
 
     payload: dict = {
         "ok": ok,
