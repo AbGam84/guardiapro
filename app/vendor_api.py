@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 import unicodedata
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from jose import JWTError, jwt
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -23,7 +23,9 @@ from app.config import (
 )
 from app.database import get_db
 from app.field_codes import generate_field_code
-from app.helpers import company_dict, user_dict
+from app.company_logo import save_company_logo
+from app.helpers import company_dict, site_dict, user_dict
+from app.schemas import SiteIn
 from app.models import ClientSite, Company, Shift, User
 from app.passwords import generate_client_password
 from app.subscription import (
@@ -71,6 +73,7 @@ class VendorUserIn(BaseModel):
     badge: str = ""
     phone: str = ""
     client_site_id: int | None = None
+    field_code: str = ""
 
 
 class VendorResetPasswordIn(BaseModel):
@@ -329,7 +332,13 @@ def vendor_create_user(
     db.add(row)
     db.flush()
     if role == "guard":
-        row.field_code = generate_field_code(db, company.id)
+        fc = (payload.field_code or "").strip()
+        if fc:
+            if db.query(User).filter(User.field_code == fc).first():
+                raise HTTPException(status_code=400, detail="Código celular ya en uso")
+            row.field_code = fc
+        else:
+            row.field_code = generate_field_code(db, company.id)
     db.commit()
     db.refresh(row)
     out = user_dict(row)
@@ -400,6 +409,82 @@ def vendor_reset_user_password(
         "message": f"Clave restablecida para «{row.username}». Entrada: /login",
         "login": {"url": "/login", "username": row.username, "company_code_hint": "Dejar vacío"},
     }
+
+
+@router.get("/companies/{company_id}/sites")
+def vendor_list_sites(
+    company_id: int,
+    db: Session = Depends(get_db),
+    vendor=Depends(get_vendor),
+):
+    company = db.query(Company).filter(Company.id == company_id, Company.active.is_(True)).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Empresa no encontrada")
+    rows = (
+        db.query(ClientSite)
+        .filter(ClientSite.company_id == company_id, ClientSite.active.is_(True))
+        .order_by(ClientSite.name.asc())
+        .all()
+    )
+    return {"sites": [site_dict(s) for s in rows]}
+
+
+@router.post("/companies/{company_id}/sites")
+def vendor_create_site(
+    company_id: int,
+    payload: SiteIn,
+    db: Session = Depends(get_db),
+    vendor=Depends(get_vendor),
+):
+    company = db.query(Company).filter(Company.id == company_id, Company.active.is_(True)).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Empresa no encontrada")
+    name = payload.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Nombre de sitio requerido")
+    exists = (
+        db.query(ClientSite)
+        .filter(ClientSite.company_id == company_id, ClientSite.name == name, ClientSite.active.is_(True))
+        .first()
+    )
+    if exists:
+        return {"ok": True, "site": site_dict(exists), "message": "Sitio ya existía"}
+    row = ClientSite(
+        company_id=company_id,
+        name=name,
+        address=(payload.address or "").strip(),
+        client_name=(payload.client_name or "").strip(),
+        client_phone=(payload.client_phone or "").strip(),
+        notes=(payload.notes or "").strip(),
+        lat=payload.lat,
+        lng=payload.lng,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return {"ok": True, "site": site_dict(row)}
+
+
+@router.post("/companies/{company_id}/logo")
+async def vendor_upload_company_logo(
+    company_id: int,
+    db: Session = Depends(get_db),
+    vendor=Depends(get_vendor),
+    file: UploadFile = File(...),
+):
+    company = db.query(Company).filter(Company.id == company_id, Company.active.is_(True)).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Empresa no encontrada")
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Suba una imagen (PNG, JPG o WebP)")
+    content = await file.read()
+    if len(content) > 4 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Máximo 4 MB")
+    fname = save_company_logo(company.id, content, file.filename or "logo.png")
+    company.logo_filename = fname
+    db.commit()
+    db.refresh(company)
+    return {"ok": True, "company": company_dict(company)}
 
 
 @router.post("/guards/{guard_id}/field-code")

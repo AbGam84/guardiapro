@@ -4,6 +4,7 @@ __pycache__/
 data/
 *.db
 .env
+push-cloud.env
 .idea/
 .vscode/
 tools/cloudflared.exe

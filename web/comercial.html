@@ -456,7 +456,6 @@
       e.preventDefault();
       if (!selectedCompanyId) { alert("Seleccione empresa"); return; }
       const fd = new FormData(e.target);
-      const body = Object.fromEntries(fd.entries());
       const autoPass = document.getElementById("guardAutoPass").checked;
       let pwd = (fd.get("password") || "").trim();
       if (autoPass) pwd = generateClientPassword();
