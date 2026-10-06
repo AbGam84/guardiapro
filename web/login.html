@@ -70,12 +70,21 @@
           nameEl.classList.remove("hidden");
         }
         if (b.logo_url) {
-          clientLogo.src = b.logo_url + "&t=" + Date.now();
+          const sep = b.logo_url.includes("?") ? "&" : "?";
+          clientLogo.src = b.logo_url + sep + "t=" + Date.now();
+          clientLogo.alt = b.name || "Logo empresa";
           clientLogo.classList.remove("hidden");
           defaultMark.classList.add("hidden");
+        } else if (b.name) {
+          clientLogo.classList.add("hidden");
+          defaultMark.classList.remove("hidden");
         } else {
           clientLogo.classList.add("hidden");
           defaultMark.classList.remove("hidden");
+        }
+        if (b.code) {
+          const ci = document.querySelector('input[name="company_code"]');
+          if (ci && !ci.value.trim()) ci.value = b.code;
         }
       } catch {
         clientLogo.classList.add("hidden");
@@ -100,7 +109,23 @@
       }
     }
     const userInput = document.querySelector('input[name="username"]');
-    if (userInput) userInput.focus();
+    let userBrandTimer = null;
+    if (userInput) {
+      userInput.addEventListener("input", () => {
+        clearTimeout(userBrandTimer);
+        const u = (userInput.value || "").trim();
+        if (u.length < 3) return;
+        userBrandTimer = setTimeout(async () => {
+          try {
+            const r = await fetch("/api/branding/by-user/" + encodeURIComponent(u.toLowerCase()));
+            if (!r.ok) return;
+            const b = await r.json();
+            if (b.code) refreshClientBrand(b.code);
+          } catch { /* sin marca hasta código o usuario válido */ }
+        }, 450);
+      });
+      userInput.focus();
+    }
 
     document.getElementById("loginForm").addEventListener("submit", async (e) => {
       e.preventDefault();

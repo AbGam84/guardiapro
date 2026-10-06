@@ -197,6 +197,15 @@ def login_field_code(payload: FieldCodeLoginIn, db: Session = Depends(get_db)):
     }
 
 
+def _public_branding_payload(company: Company) -> dict:
+    return {
+        "code": company.code,
+        "name": company.name,
+        "logo_url": company_dict(company, include_subscription=False).get("logo_url") or "",
+        "has_logo": bool(company.logo_filename or company_logo_path(company.id, "")),
+    }
+
+
 @router.get("/api/branding/{company_code}")
 def public_branding(company_code: str, db: Session = Depends(get_db)):
     code = (company_code or "").strip().lower()
@@ -205,12 +214,22 @@ def public_branding(company_code: str, db: Session = Depends(get_db)):
     company = db.query(Company).filter(Company.code == code, Company.active.is_(True)).first()
     if not company:
         raise HTTPException(status_code=404, detail="Empresa no encontrada")
-    return {
-        "code": company.code,
-        "name": company.name,
-        "logo_url": company_dict(company, include_subscription=False).get("logo_url") or "",
-        "has_logo": bool(company.logo_filename or company_logo_path(company.id, "")),
-    }
+    return _public_branding_payload(company)
+
+
+@router.get("/api/branding/by-user/{username}")
+def public_branding_by_user(username: str, db: Session = Depends(get_db)):
+    """Marca blanca en /login: al escribir usuario, mostrar logo y nombre de su empresa."""
+    uname = (username or "").strip().lower()
+    if len(uname) < 2:
+        raise HTTPException(status_code=404, detail="—")
+    user = db.query(User).filter(User.username == uname, User.active.is_(True)).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="—")
+    company = db.query(Company).filter(Company.id == user.company_id, Company.active.is_(True)).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="—")
+    return _public_branding_payload(company)
 
 
 @router.get("/api/company/logo")
