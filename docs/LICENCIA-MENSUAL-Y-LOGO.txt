@@ -36,7 +36,7 @@ Empresas antiguas sin paid_until: siguen activas (legacy).
 CLIENTE REFERENCIA (Render / demo)
 ----------------------------------
 Código: grupo-gomez · Grupo Gómez y Asociados
-Logo: data/brand/grupo-gomez-logo.jpeg (se aplica al arrancar)
+Logo: web/static/clients/grupo-gomez-logo.jpeg (se aplica al arrancar)
 Admin cliente: admin.grupogomez / Gomez2026!
 Renovar mes: /comercial → Licencia mensual → Sumar meses pagados
 

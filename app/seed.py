@@ -29,7 +29,9 @@ from app.models import (
 
 COMPANY_CODE = "excalibu-telecom"
 GRUPO_GOMEZ_CODE = "grupo-gomez"
-GRUPO_GOMEZ_LOGO = Path(__file__).resolve().parents[1] / "data" / "brand" / "grupo-gomez-logo.jpeg"
+GRUPO_GOMEZ_LOGO = (
+    Path(__file__).resolve().parents[1] / "web" / "static" / "clients" / "grupo-gomez-logo.jpeg"
+)
 GRUPO_GOMEZ_ADMIN_USER = "admin.grupogomez"
 GRUPO_GOMEZ_ADMIN_PASS = "Gomez2026!"
 _DEMO_CODES = {"demo-seguridad", "demo"}
