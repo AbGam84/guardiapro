@@ -51,7 +51,7 @@ class CompanyCreateIn(BaseModel):
     prepaid_months: int = Field(default=1, ge=1, le=36)
     admin_name: str = "Administrador"
     admin_username: str = "admin"
-    admin_password: str = ""
+    admin_password: str | None = None
     auto_password: bool = True
 
 
@@ -65,7 +65,7 @@ class VendorSubscriptionIn(BaseModel):
 class VendorUserIn(BaseModel):
     name: str
     username: str
-    password: str = ""
+    password: str | None = None
     auto_password: bool = True
     role: str = "guard"
     badge: str = ""
@@ -179,7 +179,7 @@ def vendor_create_company(payload: CompanyCreateIn, db: Session = Depends(get_db
     uname = payload.admin_username.strip().lower()
     if db.query(User).filter(User.username == uname).first():
         raise HTTPException(status_code=400, detail="Usuario admin ya existe — elija otro")
-    admin_plain, generated = _plain_password_for_client(payload.admin_password, payload.auto_password)
+    admin_plain, generated = _plain_password_for_client(payload.admin_password or "", payload.auto_password)
     company = Company(
         code=code,
         name=payload.name.strip(),
@@ -306,7 +306,7 @@ def vendor_create_user(
     uname = payload.username.strip().lower()
     if db.query(User).filter(User.username == uname).first():
         raise HTTPException(status_code=400, detail="Usuario ya existe globalmente")
-    plain, generated = _plain_password_for_client(payload.password, payload.auto_password)
+    plain, generated = _plain_password_for_client(payload.password or "", payload.auto_password)
     home_site = payload.client_site_id
     if home_site:
         site = (

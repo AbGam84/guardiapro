@@ -70,7 +70,7 @@
           <label>Nombre administrador<input name="admin_name" value="Administrador" /></label>
           <label>Usuario admin<input name="admin_username" value="admin" required autocomplete="off" /></label>
           <label class="full" style="display:flex;align-items:center;gap:8px;margin:0">
-            <input id="coAutoPass" name="auto_password" type="checkbox" checked style="width:auto" />
+            <input id="coAutoPass" type="checkbox" checked style="width:auto" />
             Generar clave automática (recomendado — se muestra una sola vez para entregar al cliente)
           </label>
           <label id="coPassWrap" class="full hidden">Clave manual (opcional)<input name="admin_password" type="text" autocomplete="off" placeholder="Mínimo 6 caracteres" /></label>
@@ -170,12 +170,27 @@
     const vTok = () => localStorage.getItem(VTOKEN) || "";
     const setVTok = (t) => t ? localStorage.setItem(VTOKEN, t) : localStorage.removeItem(VTOKEN);
 
+    function formatApiError(detail, status) {
+      if (Array.isArray(detail)) {
+        return detail.map((x) => x.msg || JSON.stringify(x)).join(" · ");
+      }
+      if (detail && typeof detail === "object") return JSON.stringify(detail);
+      return detail || ("Error " + status);
+    }
+
+    function generateClientPassword() {
+      const alphabet = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789";
+      let out = "";
+      for (let i = 0; i < 12; i++) out += alphabet[Math.floor(Math.random() * alphabet.length)];
+      return out;
+    }
+
     async function vapi(path, opts = {}) {
       const h = { ...(opts.headers || {}), "Content-Type": "application/json" };
       if (vTok()) h.Authorization = "Bearer " + vTok();
       const r = await fetch(path, { ...opts, headers: h });
       const data = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(data.detail || "Error " + r.status);
+      if (!r.ok) throw new Error(formatApiError(data.detail, r.status));
       return data;
     }
 
@@ -377,17 +392,32 @@
       const err = document.getElementById("vErr");
       err.classList.add("hidden");
       const fd = new FormData(e.target);
-      const body = Object.fromEntries(fd.entries());
-      body.monthly_fee_crc = Number(body.monthly_fee_crc || 58000);
-      body.max_officers = Number(body.max_officers || 10);
-      body.prepaid_months = Number(body.prepaid_months || 1);
-      body.auto_password = document.getElementById("coAutoPass").checked;
-      if (body.auto_password) body.admin_password = "";
+      const autoPass = document.getElementById("coAutoPass").checked;
+      let adminPassword = (fd.get("admin_password") || "").trim();
+      if (autoPass) adminPassword = generateClientPassword();
+      else if (adminPassword.length < 6) {
+        err.textContent = "Clave manual: mínimo 6 caracteres, o deje marcada «Generar clave automática».";
+        err.classList.remove("hidden");
+        return;
+      }
+      const body = {
+        name: fd.get("name"),
+        code: fd.get("code") || "",
+        alert_whatsapp: fd.get("alert_whatsapp") || "",
+        monthly_fee_crc: Number(fd.get("monthly_fee_crc") || 58000),
+        max_officers: Number(fd.get("max_officers") || 10),
+        prepaid_months: Number(fd.get("prepaid_months") || 1),
+        admin_name: fd.get("admin_name") || "Administrador",
+        admin_username: fd.get("admin_username"),
+        admin_password: adminPassword,
+        auto_password: autoPass,
+      };
       try {
         const d = await vapi("/api/vendor/companies", { method: "POST", body: JSON.stringify(body) });
+        const creds = { ...(d.credentials || {}), password: d.credentials?.password || adminPassword };
         const box = document.getElementById("coResult");
         box.classList.remove("hidden");
-        box.innerHTML = `<strong>${d.message}</strong><br><br>${renderClientCredentials(d.credentials)}`;
+        box.innerHTML = `<strong>${d.message}</strong><br><br>${renderClientCredentials(creds)}`;
         e.target.reset();
         await showApp();
       } catch (ex) {
@@ -400,15 +430,24 @@
       e.preventDefault();
       if (!selectedCompanyId) { alert("Seleccione empresa"); return; }
       const fd = new FormData(e.target);
-      const body = Object.fromEntries(fd.entries());
-      body.auto_password = document.getElementById("adminAutoPass").checked;
-      if (body.auto_password) body.password = "";
+      const autoPass = document.getElementById("adminAutoPass").checked;
+      let pwd = (fd.get("password") || "").trim();
+      if (autoPass) pwd = generateClientPassword();
+      else if (pwd.length < 6) { alert("Clave manual: mínimo 6 caracteres"); return; }
+      const body = {
+        name: fd.get("name"),
+        username: fd.get("username"),
+        password: pwd,
+        auto_password: autoPass,
+        role: fd.get("role") || "admin",
+      };
       const d = await vapi(`/api/vendor/companies/${selectedCompanyId}/users`, {
         method: "POST", body: JSON.stringify(body),
       });
+      const creds = { ...(d.credentials || {}), password: d.credentials?.password || pwd };
       const box = document.getElementById("adminResult");
       box.classList.remove("hidden");
-      box.innerHTML = `<strong>${d.message}</strong><br><br>${renderClientCredentials(d.credentials)}`;
+      box.innerHTML = `<strong>${d.message}</strong><br><br>${renderClientCredentials(creds)}`;
       e.target.reset();
       loadCompanyDetail(selectedCompanyId);
     };
@@ -418,19 +457,30 @@
       if (!selectedCompanyId) { alert("Seleccione empresa"); return; }
       const fd = new FormData(e.target);
       const body = Object.fromEntries(fd.entries());
-      body.role = "guard";
-      body.auto_password = document.getElementById("guardAutoPass").checked;
-      if (body.auto_password) body.password = "";
+      const autoPass = document.getElementById("guardAutoPass").checked;
+      let pwd = (fd.get("password") || "").trim();
+      if (autoPass) pwd = generateClientPassword();
+      else if (pwd.length < 6) { alert("Clave manual: mínimo 6 caracteres"); return; }
+      const body = {
+        name: fd.get("name"),
+        username: fd.get("username"),
+        password: pwd,
+        auto_password: autoPass,
+        role: "guard",
+        badge: fd.get("badge") || "",
+        phone: fd.get("phone") || "",
+      };
       const d = await vapi(`/api/vendor/companies/${selectedCompanyId}/users`, {
         method: "POST", body: JSON.stringify(body),
       });
+      const guardCreds = { ...(d.credentials || {}), password: d.credentials?.password || pwd };
       const u = d.user || {};
       const link = location.origin + (u.field_login_path || "");
       const box = document.getElementById("guardResult");
       box.classList.remove("hidden");
       box.innerHTML = `<strong>${d.message}</strong><br>
         Código celular: <code style="font-size:1.2rem;color:var(--gold)">${u.field_code}</code><br>
-        Link: <code>${link}</code><br>${renderClientCredentials(d.credentials)}`;
+        Link: <code>${link}</code><br>${renderClientCredentials(guardCreds)}`;
       e.target.reset();
       loadCompanyDetail(selectedCompanyId);
     };
