@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import mimetypes
 import os
+import random
 import sys
 import uuid
 from datetime import datetime
@@ -102,6 +103,11 @@ def _upload_logo_vendor(token: str, company_id: int, logo_path: Path) -> None:
         raise RuntimeError(f"Logo upload → {e.code}: {detail}") from e
 
 
+def _gen_password(length: int = 12) -> str:
+    alphabet = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789"
+    return "".join(random.choice(alphabet) for _ in range(length))
+
+
 def _months_until(paid_until: datetime | None) -> int:
     if not paid_until:
         return 1
@@ -152,6 +158,7 @@ def main() -> None:
                 continue
             prepaid = _months_until(co.paid_until)
             auto = not bool(admin_plain)
+            admin_for_create = admin_plain if admin_plain else _gen_password()
             payload = {
                 "name": co.name,
                 "code": co.code,
@@ -162,13 +169,13 @@ def main() -> None:
                 "prepaid_months": prepaid,
                 "admin_name": primary.name or "Administrador",
                 "admin_username": primary.username,
-                "admin_password": admin_plain or None,
+                "admin_password": admin_for_create,
                 "auto_password": auto,
             }
             out = _http("POST", "/api/vendor/companies", payload, token=vtok)
             cloud = out["company"]
             creds = out.get("credentials") or {}
-            created_admin_password = admin_plain or creds.get("password") or ""
+            created_admin_password = admin_plain or creds.get("password") or admin_for_create
             cloud_by_code[co.code] = cloud
             print(f"  Creada en nube (id {cloud['id']}). Admin: {primary.username}")
             if auto and created_admin_password:
@@ -205,16 +212,16 @@ def main() -> None:
             if u.username in existing_users:
                 continue
             if u.role == "admin" and primary_admin and u.id != primary_admin.id:
-                pwd = SYNC_ADMIN_PASS or None
+                pwd = SYNC_ADMIN_PASS or _gen_password()
                 body = {
                     "name": u.name,
                     "username": u.username,
                     "password": pwd,
-                    "auto_password": not bool(pwd),
+                    "auto_password": False,
                     "role": "admin",
                 }
                 _http("POST", f"/api/vendor/companies/{cid}/users", body, token=vtok)
-                print(f"  Admin creado: {u.username}" + (" (clave auto — restablecer)" if not pwd else ""))
+                print(f"  Admin creado: {u.username} · clave nube: {pwd}")
             elif u.role == "guard":
                 ls = (
                     db.query(ClientSite).filter(ClientSite.id == u.client_site_id).first()
@@ -227,7 +234,8 @@ def main() -> None:
                         {
                             "name": u.name,
                             "username": u.username,
-                            "auto_password": True,
+                            "password": _gen_password(),
+                            "auto_password": False,
                             "role": "guard",
                             "badge": u.badge or "",
                             "phone": u.phone or "",
@@ -237,26 +245,38 @@ def main() -> None:
                     )
                 )
 
-        cloud_sites = _http("GET", f"/api/vendor/companies/{cid}/sites", token=vtok).get("sites") or []
+        try:
+            cloud_sites = _http("GET", f"/api/vendor/companies/{cid}/sites", token=vtok).get("sites") or []
+        except RuntimeError as ex:
+            if "404" in str(ex):
+                print("  Sitios: API comercial en nube aún sin actualizar — Manual Deploy en Render y corra de nuevo.")
+                cloud_sites = []
+            else:
+                raise
         site_by_name = {s["name"]: s["id"] for s in cloud_sites}
         local_sites = db.query(ClientSite).filter(ClientSite.company_id == co.id, ClientSite.active.is_(True)).all()
         for s in local_sites:
             if s.name in site_by_name:
                 continue
-            row = _http(
-                "POST",
-                f"/api/vendor/companies/{cid}/sites",
-                {
-                    "name": s.name,
-                    "address": s.address or "Guanacaste, CR",
-                    "client_name": s.client_name or "",
-                    "client_phone": s.client_phone or "",
-                    "notes": s.notes or "",
-                },
-                token=vtok,
-            )
-            site_by_name[s.name] = row["site"]["id"]
-            print(f"  Sitio: {s.name}")
+            try:
+                row = _http(
+                    "POST",
+                    f"/api/vendor/companies/{cid}/sites",
+                    {
+                        "name": s.name,
+                        "address": s.address or "Guanacaste, CR",
+                        "client_name": s.client_name or "",
+                        "client_phone": s.client_phone or "",
+                        "notes": s.notes or "",
+                    },
+                    token=vtok,
+                )
+                site_by_name[s.name] = row["site"]["id"]
+                print(f"  Sitio: {s.name}")
+            except RuntimeError as ex:
+                if "404" in str(ex):
+                    break
+                raise
 
         detail = _http("GET", f"/api/vendor/companies/{cid}", token=vtok)
         existing_users = {u["username"]: u for u in (detail.get("admins") or []) + (detail.get("guards") or [])}
@@ -272,8 +292,14 @@ def main() -> None:
 
         logo = company_logo_path(co.id, co.logo_filename or "")
         if logo and logo.is_file():
-            _upload_logo_vendor(vtok, cid, logo)
-            print(f"  Logo subido ({logo.name}).")
+            try:
+                _upload_logo_vendor(vtok, cid, logo)
+                print(f"  Logo subido ({logo.name}).")
+            except RuntimeError as ex:
+                if "404" in str(ex):
+                    print("  Logo: espere deploy Render con commit d6c3ca7+ y corra de nuevo.")
+                else:
+                    raise
 
         login_user = primary_admin.username if primary_admin else "admin"
         print(f"  Login cliente: {CLOUD}/login?empresa={co.code}")
