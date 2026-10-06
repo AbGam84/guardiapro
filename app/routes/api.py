@@ -6,7 +6,7 @@ from typing import Annotated
 
 import aiofiles
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
 from app.auth import create_access_token, get_current_user, hash_password, require_roles, verify_password
@@ -28,6 +28,7 @@ from app.config import (
     UPLOADS_DIR,
 )
 from app.database import get_db
+from app.health_status import build_health_payload
 from app.company_logo import (
     company_logo_path,
     delete_company_logo,
@@ -92,14 +93,9 @@ def health_short():
 
 @router.get("/api/health")
 def health():
-    return {
-        "ok": True,
-        "product": PRODUCT_NAME,
-        "slogan": SLOGAN,
-        "tagline": TAGLINE,
-        "production": IS_PRODUCTION,
-        "build": "20260929",
-    }
+    body = build_health_payload()
+    status = 200 if body.get("ok") else 503
+    return JSONResponse(content=body, status_code=status)
 
 
 @router.get("/api/product")

@@ -11,8 +11,10 @@ PANEL COMERCIAL (/comercial)
 ----------------------------
 Nueva venta:
   - Cuota mensual (CRC)
-  - Máximo de oficiales
+  - Máximo oficiales
   - Meses pagados al crear (paid_until)
+  - Clave admin: generación automática (visible una vez para WhatsApp al cliente)
+  - Misma clave todo el contrato; al vencer licencia bloquea login; al pagar → «Reactivar 1 mes»
 
 Gestionar empresa → Licencia mensual:
   - Ajustar cuota y cupo de oficiales

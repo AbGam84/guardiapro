@@ -25,7 +25,13 @@ from app.database import get_db
 from app.field_codes import generate_field_code
 from app.helpers import company_dict, user_dict
 from app.models import ClientSite, Company, Shift, User
-from app.subscription import assert_can_add_guard, extend_paid_until, refresh_subscription_status
+from app.passwords import generate_client_password
+from app.subscription import (
+    assert_can_add_guard,
+    extend_paid_until,
+    refresh_subscription_status,
+    subscription_allows_access,
+)
 
 router = APIRouter(prefix="/api/vendor", tags=["vendor"])
 
@@ -45,7 +51,8 @@ class CompanyCreateIn(BaseModel):
     prepaid_months: int = Field(default=1, ge=1, le=36)
     admin_name: str = "Administrador"
     admin_username: str = "admin"
-    admin_password: str = Field(min_length=6)
+    admin_password: str = ""
+    auto_password: bool = True
 
 
 class VendorSubscriptionIn(BaseModel):
@@ -58,7 +65,8 @@ class VendorSubscriptionIn(BaseModel):
 class VendorUserIn(BaseModel):
     name: str
     username: str
-    password: str = Field(min_length=6)
+    password: str = ""
+    auto_password: bool = True
     role: str = "guard"
     badge: str = ""
     phone: str = ""
@@ -66,6 +74,39 @@ class VendorUserIn(BaseModel):
 
 class VendorResetPasswordIn(BaseModel):
     password: str = Field(min_length=6)
+
+
+def _plain_password_for_client(raw: str, auto: bool) -> tuple[str, bool]:
+    """Devuelve (clave en claro, fue_generada)."""
+    plain = (raw or "").strip()
+    if auto:
+        if not plain:
+            return generate_client_password(), True
+        if len(plain) < 6:
+            raise HTTPException(status_code=400, detail="La clave manual debe tener al menos 6 caracteres")
+        return plain, False
+    if not plain:
+        raise HTTPException(status_code=400, detail="Indique clave o active «Generar clave automática»")
+    if len(plain) < 6:
+        raise HTTPException(status_code=400, detail="La clave manual debe tener al menos 6 caracteres")
+    return plain, False
+
+
+def _client_credentials_block(company: Company, username: str, password: str, portal: str) -> dict:
+    refresh_subscription_status(company)
+    until = company.paid_until.isoformat() if company.paid_until else None
+    return {
+        "portal": portal,
+        "login_url": "/login",
+        "username": username,
+        "password": password,
+        "company_code": company.code,
+        "paid_until": until,
+        "note": (
+            "Entregue usuario y clave al cliente. Si la licencia vence, el login se bloquea; "
+            "al sumar meses pagados en este panel se reactiva sin cambiar usuario ni clave."
+        ),
+    }
 
 
 def slugify(text: str) -> str:
@@ -137,6 +178,7 @@ def vendor_create_company(payload: CompanyCreateIn, db: Session = Depends(get_db
     uname = payload.admin_username.strip().lower()
     if db.query(User).filter(User.username == uname).first():
         raise HTTPException(status_code=400, detail="Usuario admin ya existe — elija otro")
+    admin_plain, generated = _plain_password_for_client(payload.admin_password, payload.auto_password)
     company = Company(
         code=code,
         name=payload.name.strip(),
@@ -154,7 +196,7 @@ def vendor_create_company(payload: CompanyCreateIn, db: Session = Depends(get_db
         company_id=company.id,
         name=payload.admin_name.strip(),
         username=uname,
-        password_hash=hash_password(payload.admin_password),
+        password_hash=hash_password(admin_plain),
         role="admin",
         badge="ADM-001",
     )
@@ -162,18 +204,15 @@ def vendor_create_company(payload: CompanyCreateIn, db: Session = Depends(get_db
     db.commit()
     db.refresh(company)
     db.refresh(admin)
+    creds = _client_credentials_block(company, admin.username, admin_plain, "/admin")
+    creds["admin_url"] = "/admin"
+    creds["password_generated"] = generated
     return {
         "ok": True,
         "company": company_dict(company),
         "admin": user_dict(admin),
-        "credentials": {
-            "login_url": "/login",
-            "admin_url": "/admin",
-            "company_code": company.code,
-            "username": admin.username,
-            "password_hint": "La clave que definió al crear",
-        },
-        "message": f"Empresa «{company.name}» lista para operar.",
+        "credentials": creds,
+        "message": f"Empresa «{company.name}» lista. Copie la clave y entréguela al cliente.",
     }
 
 
@@ -194,11 +233,24 @@ def vendor_update_subscription(
     status = (payload.subscription_status or "").strip().lower()
     if status in ("active", "trial", "past_due", "suspended"):
         company.subscription_status = status
+    reactivated = False
     if payload.add_months:
         extend_paid_until(company, payload.add_months)
+        reactivated = True
     db.commit()
     db.refresh(company)
-    return {"ok": True, "company": company_dict(company)}
+    msg = "Licencia actualizada."
+    if reactivated:
+        msg = (
+            f"Licencia extendida {payload.add_months} mes(es). "
+            "El cliente entra con el mismo usuario y clave — no hace falta restablecer."
+        )
+    return {
+        "ok": True,
+        "company": company_dict(company),
+        "message": msg,
+        "operational": subscription_allows_access(company),
+    }
 
 
 @router.get("/companies/{company_id}")
@@ -253,11 +305,12 @@ def vendor_create_user(
     uname = payload.username.strip().lower()
     if db.query(User).filter(User.username == uname).first():
         raise HTTPException(status_code=400, detail="Usuario ya existe globalmente")
+    plain, generated = _plain_password_for_client(payload.password, payload.auto_password)
     row = User(
         company_id=company.id,
         name=payload.name.strip(),
         username=uname,
-        password_hash=hash_password(payload.password),
+        password_hash=hash_password(plain),
         role=role,
         badge=payload.badge.strip(),
         phone=payload.phone.strip(),
@@ -272,15 +325,39 @@ def vendor_create_user(
     if role == "guard":
         out = _guard_payload(row)
     portal = "/admin" if role in ("admin", "supervisor") else "/oficial"
+    creds = _client_credentials_block(company, row.username, plain, portal)
+    creds["field_code"] = row.field_code or None
+    creds["password_generated"] = generated
     return {
         "user": out,
-        "credentials": {
-            "portal": portal,
-            "username": row.username,
-            "field_code": row.field_code or None,
-            "company_code": company.code,
-        },
-        "message": f"Usuario {role} creado para {company.name}",
+        "credentials": creds,
+        "message": f"Usuario {role} creado para {company.name}. Copie la clave para el cliente.",
+    }
+
+
+@router.post("/companies/{company_id}/reactivate")
+def vendor_reactivate_month(
+    company_id: int,
+    months: int = 1,
+    db: Session = Depends(get_db),
+    vendor=Depends(get_vendor),
+):
+    """Cliente pagó mensualidad: extiende licencia sin tocar usuario/clave."""
+    company = db.query(Company).filter(Company.id == company_id, Company.active.is_(True)).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Empresa no encontrada")
+    months = max(1, min(months, 36))
+    extend_paid_until(company, months)
+    db.commit()
+    db.refresh(company)
+    return {
+        "ok": True,
+        "company": company_dict(company),
+        "operational": subscription_allows_access(company),
+        "message": (
+            f"Servicio reactivado {months} mes(es). Mismo usuario y contraseña en /login — "
+            "no restablezca la clave salvo que el cliente lo pida."
+        ),
     }
 
 

@@ -88,7 +88,19 @@
         clearTimeout(brandTimer);
         brandTimer = setTimeout(() => refreshClientBrand(codeInput.value), 400);
       });
+      const prefill =
+        new URLSearchParams(location.search).get("empresa") ||
+        new URLSearchParams(location.search).get("code") ||
+        "";
+      if (prefill) {
+        codeInput.value = prefill;
+        const det = codeInput.closest("details");
+        if (det) det.open = true;
+        refreshClientBrand(prefill);
+      }
     }
+    const userInput = document.querySelector('input[name="username"]');
+    if (userInput) userInput.focus();
 
     document.getElementById("loginForm").addEventListener("submit", async (e) => {
       e.preventDefault();

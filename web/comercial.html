@@ -68,8 +68,12 @@
           <label>Máx. oficiales<input name="max_officers" type="number" value="10" min="1" max="500" /></label>
           <label>Meses pagados al inicio (1 = un mes)<input name="prepaid_months" type="number" value="1" min="1" max="36" title="Tras vencer, el cliente no entra hasta sumar meses en Licencia mensual" /></label>
           <label>Nombre administrador<input name="admin_name" value="Administrador" /></label>
-          <label>Usuario admin<input name="admin_username" value="admin" required /></label>
-          <label>Clave admin<input name="admin_password" type="password" minlength="6" required placeholder="Mínimo 6 caracteres" /></label>
+          <label>Usuario admin<input name="admin_username" value="admin" required autocomplete="off" /></label>
+          <label class="full" style="display:flex;align-items:center;gap:8px;margin:0">
+            <input id="coAutoPass" name="auto_password" type="checkbox" checked style="width:auto" />
+            Generar clave automática (recomendado — se muestra una sola vez para entregar al cliente)
+          </label>
+          <label id="coPassWrap" class="full hidden">Clave manual (opcional)<input name="admin_password" type="text" autocomplete="off" placeholder="Mínimo 6 caracteres" /></label>
           <div class="full"><button class="btn btn-primary" type="submit">Crear empresa + admin</button></div>
         </form>
         <div id="coResult" class="cred-box hidden"></div>
@@ -90,6 +94,11 @@
       <div class="panel" style="margin-top:16px">
         <h2>Licencia mensual</h2>
         <p class="muted" id="subHint">Seleccione empresa arriba.</p>
+        <div id="reactivateBox" class="hidden" style="margin-bottom:12px;padding:12px;border-radius:12px;border:1px solid rgba(255,176,32,.4);background:rgba(255,176,32,.08)">
+          <strong>Licencia vencida o bloqueada</strong>
+          <p class="muted" style="margin:8px 0">El cliente conserva el mismo usuario y clave. Al registrar el pago, reactive sin restablecer contraseña.</p>
+          <button class="btn btn-primary" type="button" id="btnReactivateMonth">Cliente pagó — reactivar 1 mes</button>
+        </div>
         <form id="subForm" class="form-grid two-col">
           <label>Cuota ₡/mes<input name="monthly_fee_crc" type="number" min="0" /></label>
           <label>Máx. oficiales<input name="max_officers" type="number" min="1" max="500" /></label>
@@ -116,7 +125,11 @@
         <form id="adminForm" class="form-grid two-col">
           <label>Nombre<input name="name" required placeholder="Gerente operaciones" /></label>
           <label>Usuario login<input name="username" required autocomplete="off" /></label>
-          <label>Clave<input name="password" type="password" minlength="6" required /></label>
+          <label class="full" style="display:flex;align-items:center;gap:8px;margin:0">
+            <input id="adminAutoPass" type="checkbox" checked style="width:auto" />
+            Generar clave automática para entregar al cliente
+          </label>
+          <label id="adminPassWrap" class="full hidden">Clave manual<input name="password" type="text" autocomplete="off" placeholder="Mínimo 6 caracteres" /></label>
           <label>Rol
             <select name="role">
               <option value="admin">Administrador</option>
@@ -138,7 +151,11 @@
           <label>Nombre completo<input name="name" required /></label>
           <label>Placa / badge<input name="badge" placeholder="OF-001" /></label>
           <label>Usuario (respaldo)<input name="username" required autocomplete="off" /></label>
-          <label>Clave (respaldo)<input name="password" type="password" minlength="6" required /></label>
+          <label class="full" style="display:flex;align-items:center;gap:8px;margin:0">
+            <input id="guardAutoPass" type="checkbox" checked style="width:auto" />
+            Generar clave de respaldo automática
+          </label>
+          <label id="guardPassWrap" class="full hidden">Clave manual<input name="password" type="text" autocomplete="off" /></label>
           <label>Teléfono<input name="phone" placeholder="+506..." /></label>
           <div class="full"><button class="btn btn-primary" type="submit">Crear oficial y generar código</button></div>
         </form>
@@ -164,6 +181,35 @@
 
     let companies = [];
     let selectedCompanyId = null;
+    const origin = () => location.origin;
+
+    function wireAutoPass(checkboxId, wrapId) {
+      const cb = document.getElementById(checkboxId);
+      const wrap = document.getElementById(wrapId);
+      if (!cb || !wrap) return;
+      const sync = () => wrap.classList.toggle("hidden", cb.checked);
+      cb.addEventListener("change", sync);
+      sync();
+    }
+    wireAutoPass("coAutoPass", "coPassWrap");
+    wireAutoPass("adminAutoPass", "adminPassWrap");
+    wireAutoPass("guardAutoPass", "guardPassWrap");
+
+    function renderClientCredentials(creds) {
+      if (!creds) return "";
+      const until = creds.paid_until
+        ? new Date(creds.paid_until).toLocaleDateString("es-CR")
+        : "—";
+      const pwd = (creds.password || "").replace(/</g, "");
+      return `<strong>Entregue al cliente (copie tal cual):</strong><br>
+        · Entrada: <code>${origin()}/login?empresa=${encodeURIComponent(creds.company_code || "")}</code><br>
+        · Usuario: <code>${creds.username}</code><br>
+        · Clave: <code style="font-size:1.05rem;color:var(--gold)">${pwd}</code>
+        ${creds.password_generated ? " <span class='muted'>(generada por el sistema)</span>" : ""}<br>
+        · Código empresa: <code>${creds.company_code}</code> (opcional en login)<br>
+        · Licencia pagada hasta: <strong>${until}</strong><br>
+        <span class="muted">${creds.note || ""}</span>`;
+    }
 
     document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
       document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
@@ -226,7 +272,9 @@
         `${d.company.name} · ${d.sites_count} sitios · ${d.open_shifts} turnos abiertos · código ${d.company.code}`;
       document.getElementById("subHint").textContent =
         `Estado: ${sub.subscription_status || "—"} · ₡${(sub.monthly_fee_crc || 0).toLocaleString("es-CR")}/mes · ` +
-        `oficiales máx. ${sub.max_officers || 10} · pagado hasta ${sub.paid_until ? new Date(sub.paid_until).toLocaleDateString("es-CR") : "—"}`;
+        `oficiales máx. ${sub.max_officers || 10} · pagado hasta ${sub.paid_until ? new Date(sub.paid_until).toLocaleDateString("es-CR") : "—"}` +
+        (sub.is_operational === false ? " · ⚠ acceso bloqueado hasta renovar" : "");
+      document.getElementById("reactivateBox").classList.toggle("hidden", sub.is_operational !== false);
       const sf = document.getElementById("subForm");
       sf.monthly_fee_crc.value = sub.monthly_fee_crc || 58000;
       sf.max_officers.value = sub.max_officers || 10;
@@ -306,11 +354,20 @@
         subscription_status: fd.get("subscription_status") || "",
         add_months: Number(fd.get("add_months") || 0),
       };
-      await vapi(`/api/vendor/companies/${selectedCompanyId}/subscription`, {
+      const d = await vapi(`/api/vendor/companies/${selectedCompanyId}/subscription`, {
         method: "PATCH",
         body: JSON.stringify(body),
       });
-      alert("Licencia actualizada");
+      alert(d.message || "Licencia actualizada");
+      await showApp();
+      loadCompanyDetail(selectedCompanyId);
+    };
+
+    document.getElementById("btnReactivateMonth").onclick = async () => {
+      if (!selectedCompanyId) return;
+      if (!confirm("¿Registrar pago de 1 mes? El cliente entra con la misma clave — sin restablecer.")) return;
+      const d = await vapi(`/api/vendor/companies/${selectedCompanyId}/reactivate?months=1`, { method: "POST" });
+      alert(d.message);
       await showApp();
       loadCompanyDetail(selectedCompanyId);
     };
@@ -324,18 +381,13 @@
       body.monthly_fee_crc = Number(body.monthly_fee_crc || 58000);
       body.max_officers = Number(body.max_officers || 10);
       body.prepaid_months = Number(body.prepaid_months || 1);
+      body.auto_password = document.getElementById("coAutoPass").checked;
+      if (body.auto_password) body.admin_password = "";
       try {
         const d = await vapi("/api/vendor/companies", { method: "POST", body: JSON.stringify(body) });
-        const c = d.credentials || {};
-        const pwd = body.admin_password || "";
         const box = document.getElementById("coResult");
         box.classList.remove("hidden");
-        box.innerHTML = `<strong>${d.message}</strong><br><br>
-          <strong>Entregue al cliente (copie tal cual):</strong><br>
-          · Entrada: <code>${origin}/login</code> (NO /comercial)<br>
-          · Usuario: <code>${c.username}</code><br>
-          · Clave: <code>${pwd.replace(/</g,"")}</code><br>
-          · Código empresa: <code>${c.company_code}</code> (o déjelo vacío al entrar)`;
+        box.innerHTML = `<strong>${d.message}</strong><br><br>${renderClientCredentials(d.credentials)}`;
         e.target.reset();
         await showApp();
       } catch (ex) {
@@ -349,12 +401,14 @@
       if (!selectedCompanyId) { alert("Seleccione empresa"); return; }
       const fd = new FormData(e.target);
       const body = Object.fromEntries(fd.entries());
+      body.auto_password = document.getElementById("adminAutoPass").checked;
+      if (body.auto_password) body.password = "";
       const d = await vapi(`/api/vendor/companies/${selectedCompanyId}/users`, {
         method: "POST", body: JSON.stringify(body),
       });
       const box = document.getElementById("adminResult");
       box.classList.remove("hidden");
-      box.innerHTML = `<strong>${d.message}</strong><br>Login: /login · Usuario: <code>${d.credentials.username}</code> · Rol: ${body.role}`;
+      box.innerHTML = `<strong>${d.message}</strong><br><br>${renderClientCredentials(d.credentials)}`;
       e.target.reset();
       loadCompanyDetail(selectedCompanyId);
     };
@@ -365,6 +419,8 @@
       const fd = new FormData(e.target);
       const body = Object.fromEntries(fd.entries());
       body.role = "guard";
+      body.auto_password = document.getElementById("guardAutoPass").checked;
+      if (body.auto_password) body.password = "";
       const d = await vapi(`/api/vendor/companies/${selectedCompanyId}/users`, {
         method: "POST", body: JSON.stringify(body),
       });
@@ -374,7 +430,7 @@
       box.classList.remove("hidden");
       box.innerHTML = `<strong>${d.message}</strong><br>
         Código celular: <code style="font-size:1.2rem;color:var(--gold)">${u.field_code}</code><br>
-        Link: <code>${link}</code>`;
+        Link: <code>${link}</code><br>${renderClientCredentials(d.credentials)}`;
       e.target.reset();
       loadCompanyDetail(selectedCompanyId);
     };

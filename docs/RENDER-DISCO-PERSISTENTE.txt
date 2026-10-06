@@ -17,6 +17,15 @@ Primer arranque con este código:
   - Borra empresas demo/seed una sola vez (lista vacía en /comercial)
   - No vuelve a crear excalibibu-telecom ni grupo-gomez automáticamente
 
+Auditoría rápida (producción):
+  GET https://excalibu-sentinel.onrender.com/api/health
+  - ok: true
+  - storage.persistent: true
+  - storage.data_dir: /var/data
+  - storage.commercial_baseline: true (tras primer arranque limpio)
+  - tenants.companies_active: N (empresas vendidas)
+  - build: commit Render (RENDER_GIT_COMMIT)
+
 Primera empresa real:
   https://excalibu-sentinel.onrender.com/comercial
   vendor / (clave en Render GUARDIA_VENDOR_PASSWORD)
