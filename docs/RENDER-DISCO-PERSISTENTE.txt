@@ -1,0 +1,28 @@
+Excalibu Sentinel en Render — disco persistente
+================================================
+
+Blueprint (render.yaml):
+  - plan: starter (disco persistente no aplica en free)
+  - disk: excalibu-data montado en /var/data (1 GB)
+  - GUARDIA_DATA_DIR=/var/data → SQLite + logos en uploads/
+
+Después del push a main:
+  1. Render Dashboard → excalibu-sentinel → Sync / Apply Blueprint
+     (o Manual Deploy si el disco no aparece solo)
+  2. Verificar en Environment que GUARDIA_DATA_DIR=/var/data
+  3. Verificar pestaña Disks: mount /var/data
+
+Primer arranque con este código:
+  - Crea .commercial_baseline_v2 en el disco
+  - Borra empresas demo/seed una sola vez (lista vacía en /comercial)
+  - No vuelve a crear excalibibu-telecom ni grupo-gomez automáticamente
+
+Primera empresa real:
+  https://excalibu-sentinel.onrender.com/comercial
+  vendor / (clave en Render GUARDIA_VENDOR_PASSWORD)
+
+Re-borrar todas las empresas (manual):
+  python scripts/wipe_tenants.py
+  (o borrar data/.commercial_baseline_v2 y reiniciar el servicio)
+
+Contacto: soporte@absolar.latam · WhatsApp +506 6370-6546

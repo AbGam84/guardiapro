@@ -53,6 +53,10 @@
     </nav>
 
     <div id="tab-venta" class="tab-panel">
+      <div id="emptyCommercialHint" class="panel hidden" style="margin-bottom:16px;border-color:rgba(18,196,160,.45);background:rgba(18,196,160,.06)">
+        <h2 style="margin-top:0">Sin empresas clientes aún</h2>
+        <p class="muted" style="margin:0">Complete el formulario de abajo para crear la <strong>primera empresa administrativa</strong>. Luego el cliente entra en <a href="/login">/login</a> con el usuario admin que defina aquí.</p>
+      </div>
       <div class="panel">
         <h2>Vender licencia — nueva empresa de seguridad</h2>
         <p class="muted">Crea la empresa y el primer administrador. El cliente opera en <strong>/admin</strong> (no aquí).</p>
@@ -206,12 +210,10 @@
       const opts = companies.map(c => `<option value="${c.id}">${c.name} (${c.code})</option>`).join("");
       document.getElementById("companyPick").innerHTML =
         opts || '<option value="">— Sin empresas —</option>';
-      if (!selectedCompanyId && companies[0]) selectedCompanyId = companies[0].id;
-      if (selectedCompanyId) document.getElementById("companyPick").value = String(selectedCompanyId);
-      const gg = companies.find(c => c.code === "grupo-gomez");
-      if (gg && !selectedCompanyId) {
-        selectedCompanyId = gg.id;
-        document.getElementById("companyPick").value = String(gg.id);
+      if (selectedCompanyId && companies.some(c => c.id === selectedCompanyId)) {
+        document.getElementById("companyPick").value = String(selectedCompanyId);
+      } else {
+        selectedCompanyId = null;
       }
     }
 
@@ -283,6 +285,8 @@
       companies = ov.companies || [];
       document.getElementById("vStats").textContent =
         `${ov.companies_count} empresas · ${ov.admins_count} admins · ${ov.guards_count} oficiales · ${ov.open_shifts} turnos abiertos`;
+      const emptyHint = document.getElementById("emptyCommercialHint");
+      if (emptyHint) emptyHint.classList.toggle("hidden", (ov.companies_count || 0) > 0);
       renderCompaniesList();
       if (selectedCompanyId) await loadCompanyDetail(selectedCompanyId);
     }

@@ -4,16 +4,18 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from app.auth import hash_password, verify_password
-from app.company_logo import company_logo_path, save_company_logo
+from app.company_logo import company_logo_path, delete_company_logo, save_company_logo
 from app.subscription import extend_paid_until
 from app.config import (
     ADMIN_NAME,
     ADMIN_PASSWORD,
     ADMIN_USERNAME,
     COMPANY_NAME,
+    DATA_DIR,
     SUPPORT_WHATSAPP,
 )
 from app.models import (
+    CameraPairToken,
     ClientSite,
     Company,
     LogEntry,
@@ -26,6 +28,8 @@ from app.models import (
     User,
     utcnow,
 )
+
+_COMMERCIAL_BASELINE_MARKER = DATA_DIR / ".commercial_baseline_v2"
 
 COMPANY_CODE = "excalibu-telecom"
 GRUPO_GOMEZ_CODE = "grupo-gomez"
@@ -40,6 +44,39 @@ _DEMO_USERNAMES = {"juan", "maria", "cliente", "supervisor"}
 
 def _is_demo_company(company: Company) -> bool:
     return company.code in _DEMO_CODES or "demo" in company.name.lower()
+
+
+def wipe_all_tenant_data(db: Session) -> int:
+    """Borra todas las empresas, usuarios y datos operativos (panel comercial en blanco)."""
+    from app.company_logo import LOGOS_DIR
+
+    company_ids = [row[0] for row in db.query(Company.id).all()]
+    db.query(LogEntry).delete(synchronize_session=False)
+    db.query(PatrolMissedAlert).delete(synchronize_session=False)
+    db.query(CameraPairToken).delete(synchronize_session=False)
+    db.query(SecurityCamera).delete(synchronize_session=False)
+    db.query(ShiftAssignment).delete(synchronize_session=False)
+    db.query(Shift).delete(synchronize_session=False)
+    db.query(PatrolRoundSchedule).delete(synchronize_session=False)
+    db.query(PatrolCheckpoint).delete(synchronize_session=False)
+    db.query(ClientSite).delete(synchronize_session=False)
+    db.query(User).delete(synchronize_session=False)
+    n = db.query(Company).delete(synchronize_session=False)
+    db.commit()
+    for cid in company_ids:
+        delete_company_logo(cid)
+    for p in LOGOS_DIR.glob("company_*.*"):
+        p.unlink(missing_ok=True)
+    return int(n)
+
+
+def ensure_commercial_empty_baseline(db: Session) -> bool:
+    """Una sola vez por volumen de datos: sin empresas demo ni seed automático."""
+    if _COMMERCIAL_BASELINE_MARKER.is_file():
+        return False
+    wipe_all_tenant_data(db)
+    _COMMERCIAL_BASELINE_MARKER.write_text("ok\n", encoding="utf-8")
+    return True
 
 
 def purge_operational_data(db: Session, company_id: int) -> None:

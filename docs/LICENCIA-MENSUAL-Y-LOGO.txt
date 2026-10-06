@@ -33,11 +33,13 @@ PATCH /api/vendor/companies/{id}/subscription — panel comercial
 
 Empresas antiguas sin paid_until: siguen activas (legacy).
 
-CLIENTE REFERENCIA (Render / demo)
-----------------------------------
-Código: grupo-gomez · Grupo Gómez y Asociados
-Logo: web/static/clients/grupo-gomez-logo.jpeg (se aplica al arrancar)
-Admin cliente: admin.grupogomez / Gomez2026!
-Renovar mes: /comercial → Licencia mensual → Sumar meses pagados
+DATOS EN RENDER
+---------------
+SQLite y logos viven en disco persistente (/var/data). Ver docs/RENDER-DISCO-PERSISTENTE.txt
+
+SIN EMPRESAS DEMO
+-----------------
+No hay seed automático al arrancar. Todas las empresas se crean desde /comercial → Nueva venta.
+Logo de referencia (opcional al vender): web/static/clients/grupo-gomez-logo.jpeg — subirlo en Ajustes del admin cliente.
 
 Contacto: soporte@absolar.latam · WhatsApp +506 6370-6546
