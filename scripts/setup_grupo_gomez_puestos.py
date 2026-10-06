@@ -47,6 +47,9 @@ def main() -> None:
             print(f"No existe empresa «{COMPANY_CODE}». Créela primero en /comercial.")
             sys.exit(1)
         company.name = "Grupo Gómez y Asociados"
+        company.brand_tagline = "Seguridad privada"
+        company.phone = "+506 6070 9197"
+        company.alert_whatsapp = "50660709197"
         if not company.paid_until:
             extend_paid_until(company, 1)
         if LOGO.is_file() and not company_logo_path(company.id, company.logo_filename or ""):

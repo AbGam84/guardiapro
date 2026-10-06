@@ -18,6 +18,7 @@ class Company(Base):
     name: Mapped[str] = mapped_column(String(160))
     phone: Mapped[str] = mapped_column(String(40), default="")
     alert_whatsapp: Mapped[str] = mapped_column(String(40), default="")
+    brand_tagline: Mapped[str] = mapped_column(String(120), default="")
     logo_filename: Mapped[str] = mapped_column(String(255), default="")
     subscription_plan: Mapped[str] = mapped_column(String(32), default="monthly")
     monthly_fee_crc: Mapped[int] = mapped_column(Integer, default=58000)

@@ -112,3 +112,5 @@ def ensure_schema(engine: Engine) -> None:
                 conn.execute(text("ALTER TABLE companies ADD COLUMN subscription_status VARCHAR(24) DEFAULT 'active'"))
             if "paid_until" not in cols:
                 conn.execute(text("ALTER TABLE companies ADD COLUMN paid_until DATETIME"))
+            if "brand_tagline" not in cols:
+                conn.execute(text("ALTER TABLE companies ADD COLUMN brand_tagline VARCHAR(120) DEFAULT ''"))

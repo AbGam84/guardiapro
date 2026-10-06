@@ -56,6 +56,7 @@ def company_dict(c: Company | None, *, include_subscription: bool = True) -> dic
         "name": c.name,
         "phone": c.phone,
         "alert_whatsapp": c.alert_whatsapp,
+        "brand_tagline": getattr(c, "brand_tagline", "") or "",
         "active": c.active,
         "logo_url": logo_url,
         "has_logo": bool(logo_url),

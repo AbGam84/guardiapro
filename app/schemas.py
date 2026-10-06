@@ -92,6 +92,7 @@ class CompanySettingsIn(BaseModel):
     name: str = ""
     phone: str = ""
     alert_whatsapp: str = ""
+    brand_tagline: str = ""
 
 
 class CameraIn(BaseModel):
