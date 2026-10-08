@@ -104,8 +104,11 @@ def main() -> None:
 
     brand = _json("GET", base, "/api/branding/grupo-gomez")
     print(json.dumps(brand, ensure_ascii=False))
-    print(f"URL cliente: {base}/login?empresa=grupo-gomez")
+    print(f"URL admin: {base}/login?empresa=grupo-gomez")
+    print(f"URL supervisor: {base}/acceso/grupo-gomez/supervisor")
+    print(f"URL guardias: {base}/oficial?empresa=grupo-gomez")
     print("Admin: admin.gomez (clave en push-cloud.env GUARDIA_SYNC_ADMIN_PASSWORD)")
+    print("Staff: python scripts/setup_grupo_gomez_staff_cloud.py")
 
 
 if __name__ == "__main__":

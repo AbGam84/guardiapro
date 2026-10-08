@@ -18,9 +18,16 @@ Usted vende una licencia mensual. El cliente recibe UNA URL propia; no comparte 
    · Usuario y clave que usted crea en /comercial → Nueva venta o Administradores
    · Tras entrar → /admin (turnos, sitios, oficiales, reportes, bitácoras)
 
-3) Oficiales en celular (opcional al vender)
-   · Cada guardia: link /oficial?code=XXXXXX (código de 6 dígitos)
-   · No usa la URL del admin; es solo para ronda en campo
+3) Supervisor (usuario/clave, rol supervisor)
+   https://excalibu-sentinel.onrender.com/acceso/grupo-gomez/supervisor
+   (misma marca: logo, nombre, teléfono — entra a /admin con permisos de supervisor)
+
+4) Oficiales en celular
+   Base con logo del cliente:
+   https://excalibu-sentinel.onrender.com/oficial?empresa=CODIGO
+   Link directo por guardia (auto-login si el navegador lo permite):
+   /oficial?empresa=CODIGO&code=XXXXXX  (6 dígitos)
+   Alternativa: /acceso/CODIGO/oficial?code=XXXXXX
 
 Dónde lo arma usted (AbSol@r / distribuidor)
 --------------------------------------------

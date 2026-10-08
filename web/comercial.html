@@ -91,9 +91,13 @@
         <h2 style="margin-top:0">Entrega al cliente — URL personalizada</h2>
         <p class="muted">Esta es la página que usted vende: logo, nombre, lema y teléfono de <em>su</em> cliente. El administrador entra con usuario/clave y monitorea oficiales en <strong>/admin</strong>.</p>
         <p id="clientUrlLine" class="code-box" style="text-align:left;font-size:.88rem">Seleccione una empresa abajo.</p>
+        <p id="supervisorUrlLine" class="code-box hidden" style="text-align:left;font-size:.88rem"></p>
+        <p id="oficialUrlLine" class="code-box hidden" style="text-align:left;font-size:.88rem"></p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-          <button class="btn btn-primary" type="button" id="btnOpenClientLogin" disabled>Abrir login del cliente</button>
-          <button class="btn btn-ghost" type="button" id="btnCopyClientUrl" disabled>Copiar URL</button>
+          <button class="btn btn-primary" type="button" id="btnOpenClientLogin" disabled>Abrir admin</button>
+          <button class="btn btn-ghost" type="button" id="btnOpenSupervisorLogin" disabled>Abrir supervisor</button>
+          <button class="btn btn-ghost" type="button" id="btnOpenOficialLogin" disabled>Abrir guardias</button>
+          <button class="btn btn-ghost" type="button" id="btnCopyClientUrl" disabled>Copiar URL admin</button>
           <button class="btn btn-ghost" type="button" id="btnCopyWhatsApp" disabled>Copiar texto WhatsApp</button>
         </div>
         <hr style="border-color:var(--border);margin:16px 0" />
@@ -169,7 +173,7 @@
 
       <div class="panel" style="margin-top:16px">
         <h2>Oficiales — código por celular</h2>
-        <p class="muted">Cada guardia recibe un código de 6 dígitos. Entra solo en <strong>/oficial</strong> — celular independiente, informe real de su recorrido.</p>
+        <p class="muted">Cada guardia recibe un código de 6 dígitos. Entra en la URL con marca de la empresa (<strong>/oficial?empresa=código</strong> o link personalizado con código).</p>
         <div id="guardList"></div>
         <hr style="border-color:var(--border);margin:16px 0" />
         <h3>Nuevo oficial + código</h3>
@@ -239,6 +243,12 @@
     function clientLoginUrl(code) {
       return `${origin()}/login?empresa=${encodeURIComponent(code || "")}`;
     }
+    function supervisorLoginUrl(code) {
+      return `${origin()}/acceso/${encodeURIComponent(code || "")}/supervisor`;
+    }
+    function oficialBrandedUrl(code) {
+      return `${origin()}/oficial?empresa=${encodeURIComponent(code || "")}`;
+    }
 
     function whatsAppDeliveryText(companyName, creds) {
       const url = creds.client_login_url && creds.client_login_url.startsWith("http")
@@ -275,21 +285,40 @@
 
     function updateClientDeliveryPanel(company, admins) {
       const urlEl = document.getElementById("clientUrlLine");
+      const supEl = document.getElementById("supervisorUrlLine");
+      const ofEl = document.getElementById("oficialUrlLine");
       const openBtn = document.getElementById("btnOpenClientLogin");
+      const openSup = document.getElementById("btnOpenSupervisorLogin");
+      const openOf = document.getElementById("btnOpenOficialLogin");
       const copyBtn = document.getElementById("btnCopyClientUrl");
       const waBtn = document.getElementById("btnCopyWhatsApp");
       const hint = document.getElementById("brandPreviewHint");
       const bf = document.getElementById("brandForm");
       if (!company || !company.code) {
         urlEl.textContent = "Seleccione una empresa.";
-        [openBtn, copyBtn, waBtn].forEach(b => { b.disabled = true; });
+        supEl.classList.add("hidden");
+        ofEl.classList.add("hidden");
+        [openBtn, openSup, openOf, copyBtn, waBtn].forEach(b => { b.disabled = true; });
         return;
       }
       const url = clientLoginUrl(company.code);
-      urlEl.innerHTML = `<span class="muted" style="font-size:.72rem">URL PARA WHATSAPP / CORREO</span><br><code style="font-size:.95rem;word-break:break-all">${url}</code>`;
-      openBtn.disabled = copyBtn.disabled = waBtn.disabled = false;
+      const supUrl = supervisorLoginUrl(company.code);
+      const ofUrl = oficialBrandedUrl(company.code);
+      urlEl.innerHTML = `<span class="muted" style="font-size:.72rem">ADMINISTRADOR</span><br><code style="font-size:.95rem;word-break:break-all">${url}</code>`;
+      supEl.classList.remove("hidden");
+      supEl.innerHTML = `<span class="muted" style="font-size:.72rem">SUPERVISOR (misma clave, rol supervisor)</span><br><code style="font-size:.95rem;word-break:break-all">${supUrl}</code>`;
+      ofEl.classList.remove("hidden");
+      ofEl.innerHTML = `<span class="muted" style="font-size:.72rem">GUARDIAS — código 6 dígitos (logo de la empresa)</span><br><code style="font-size:.95rem;word-break:break-all">${ofUrl}</code>`;
+      openBtn.disabled = openSup.disabled = openOf.disabled = copyBtn.disabled = waBtn.disabled = false;
       openBtn.onclick = () => window.open(url, "_blank");
-      copyBtn.onclick = () => { navigator.clipboard.writeText(url); copyBtn.textContent = "Copiado"; setTimeout(() => { copyBtn.textContent = "Copiar URL"; }, 2000); };
+      openSup.onclick = () => window.open(supUrl, "_blank");
+      openOf.onclick = () => window.open(ofUrl, "_blank");
+      copyBtn.onclick = () => {
+        const block = `Admin: ${url}\nSupervisor: ${supUrl}\nGuardias: ${ofUrl}`;
+        navigator.clipboard.writeText(block);
+        copyBtn.textContent = "Copiado";
+        setTimeout(() => { copyBtn.textContent = "Copiar URL admin"; }, 2000);
+      };
       const admin = (admins && admins[0]) || null;
       lastDeliveryCompanyName = company.name || company.code;
       lastDeliveryCreds = admin ? { username: admin.username, password: "", company_code: company.code } : { company_code: company.code };
@@ -402,7 +431,7 @@
 
       const origin = location.origin;
       document.getElementById("guardList").innerHTML = (d.guards || []).map(u => {
-        const link = origin + (u.field_login_path || `/oficial?code=${u.field_code}`);
+        const link = origin + (u.field_login_path_branded || u.field_login_path || `/oficial?empresa=${d.company.code}&code=${u.field_code}`);
         return `<div style="padding:14px 0;border-bottom:1px solid var(--border)">
           <strong>${u.name}</strong> ${u.badge ? `<span class="badge">${u.badge}</span>` : ""}
           <div class="code-box"><span class="muted" style="font-size:.72rem">CÓDIGO CELULAR</span><br><code>${u.field_code || "—"}</code></div>
@@ -535,7 +564,11 @@
       const creds = { ...(d.credentials || {}), password: d.credentials?.password || pwd };
       const box = document.getElementById("adminResult");
       box.classList.remove("hidden");
-      box.innerHTML = `<strong>${d.message}</strong><br><br>${renderClientCredentials(creds, d.company?.name)}`;
+      const role = fd.get("role") || "admin";
+      const extra = role === "supervisor"
+        ? `<br>· URL supervisor: <code>${supervisorLoginUrl(creds.company_code)}</code>`
+        : "";
+      box.innerHTML = `<strong>${d.message}</strong><br><br>${renderClientCredentials(creds, d.company?.name)}${extra}`;
       e.target.reset();
       loadCompanyDetail(selectedCompanyId);
     };
@@ -597,7 +630,7 @@
       });
       const guardCreds = { ...(d.credentials || {}), password: d.credentials?.password || pwd };
       const u = d.user || {};
-      const link = location.origin + (u.field_login_path || "");
+      const link = location.origin + (u.field_login_path_branded || u.field_login_path || "");
       const box = document.getElementById("guardResult");
       box.classList.remove("hidden");
       box.innerHTML = `<strong>${d.message}</strong><br>

@@ -49,7 +49,7 @@ def user_dict(u: User | None, db: Session | None = None) -> dict:
 def company_dict(c: Company | None, *, include_subscription: bool = True) -> dict:
     if not c:
         return {}
-    logo_url = company_logo_url(c.id, c.logo_filename or "")
+    logo_url = company_logo_url(c.id, c.logo_filename or "", c.code or "")
     out = {
         "id": c.id,
         "code": c.code,

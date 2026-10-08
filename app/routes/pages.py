@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.branded_login import branded_login_html
+from app.branded_login import branded_login_html, branded_oficial_html
 from app.database import get_db
 from app.models import Company
 from app.paths import WEB, WEB_MARKETING
@@ -36,8 +36,17 @@ def _login_html(request: Request, db: Session) -> HTMLResponse:
         company = db.query(Company).filter(Company.code == code, Company.active.is_(True)).first()
         if company:
             nxt = (request.query_params.get("next") or "").strip()
+            portal = (request.query_params.get("portal") or "").strip().lower()
+            portal_title = "Acceso supervisor" if portal == "supervisor" else "Acceso operativo"
             if nxt.startswith("/"):
-                return HTMLResponse(branded_login_html(company, next_path=nxt), headers=headers)
+                return HTMLResponse(
+                    branded_login_html(company, next_path=nxt, portal_title=portal_title),
+                    headers=headers,
+                )
+            return HTMLResponse(
+                branded_login_html(company, portal_title=portal_title),
+                headers=headers,
+            )
 
     path = WEB / "login.html"
     if not path.is_file():
@@ -67,17 +76,41 @@ def _login_html(request: Request, db: Session) -> HTMLResponse:
     return HTMLResponse(content, headers=headers)
 
 
-@router.get("/acceso/{company_code}")
-def page_branded_access(company_code: str, request: Request, db: Session = Depends(get_db)):
-    code = _safe_company_code(company_code)
+def _active_company(db: Session, raw_code: str) -> Company:
+    code = _safe_company_code(raw_code)
     if not code:
         raise HTTPException(status_code=404, detail="Empresa no encontrada")
     company = db.query(Company).filter(Company.code == code, Company.active.is_(True)).first()
     if not company:
         raise HTTPException(status_code=404, detail="Empresa no encontrada")
+    return company
+
+
+@router.get("/acceso/{company_code}")
+def page_branded_access(company_code: str, request: Request, db: Session = Depends(get_db)):
+    company = _active_company(db, company_code)
     nxt = (request.query_params.get("next") or "").strip()
     next_path = nxt if nxt.startswith("/") else ""
     return HTMLResponse(branded_login_html(company, next_path=next_path), headers={"Cache-Control": "no-store"})
+
+
+@router.get("/acceso/{company_code}/supervisor")
+def page_branded_supervisor(company_code: str, db: Session = Depends(get_db)):
+    company = _active_company(db, company_code)
+    return HTMLResponse(
+        branded_login_html(company, portal_title="Acceso supervisor"),
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@router.get("/acceso/{company_code}/oficial")
+def page_branded_oficial(company_code: str, request: Request, db: Session = Depends(get_db)):
+    company = _active_company(db, company_code)
+    pre = (request.query_params.get("code") or "").strip()
+    return HTMLResponse(
+        branded_oficial_html(company, prefill_code=pre),
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 def _marketing(name: str) -> HTMLResponse:
@@ -112,7 +145,14 @@ def page_guard():
 
 
 @router.get("/oficial")
-def page_oficial():
+def page_oficial(request: Request, db: Session = Depends(get_db)):
+    headers = {"Cache-Control": "no-store, no-cache, must-revalidate"}
+    code = _safe_company_code(request.query_params.get("empresa"))
+    if code:
+        company = db.query(Company).filter(Company.code == code, Company.active.is_(True)).first()
+        if company:
+            pre = (request.query_params.get("code") or "").strip()
+            return HTMLResponse(branded_oficial_html(company, prefill_code=pre), headers=headers)
     return _html("oficial.html")
 
 

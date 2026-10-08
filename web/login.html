@@ -1,198 +1,417 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Excalibu Sentinel — acceso</title>
-  <link rel="icon" href="/static/favicon.png" type="image/png" />
-  <link rel="stylesheet" href="/static/css/app.css?v=6" />
-  <link rel="manifest" href="/manifest.json" />
-  <style>
-    .client-brand-head { text-align: center; margin-bottom: 12px; }
-    .client-brand-head .brand-logo { width: 120px; height: 120px; margin: 0 auto 10px; display: block; }
-    .client-brand-head h1 { font-size: 1.15rem; line-height: 1.35; margin: 0; font-weight: 700; }
-    .client-brand-tagline { margin: 8px 0 0; font-size: .92rem; color: var(--gold); letter-spacing: .04em; text-transform: uppercase; font-weight: 600; }
-    .client-brand-phone { margin: 10px 0 0; font-size: 1.05rem; }
-    .client-brand-phone a { color: var(--teal); text-decoration: none; font-weight: 600; }
-    .client-brand-phone a:hover { text-decoration: underline; }
-    .login-powered { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); font-size: .72rem; color: var(--muted); text-align: center; }
-  </style>
-</head>
-<body>
-  <div class="login-wrap panel">
-    <div id="excalibuBrandBlock">
-      <div class="brand-head">
-        <img src="/static/excalibu-mark.png?v=5" alt="Excalibu Sentinel" class="brand-logo" width="104" height="104" />
-        <div>
-          <h1>Excalibu <span class="brand-accent">Sentinel</span></h1>
-        </div>
-      </div>
-      <blockquote class="brand-slogan brand-slogan-compact">
-        <span class="slogan-line">Su <span class="word-guardia">guardia</span> cuida el <span class="word-sitio">sitio</span>.</span>
-        <span class="slogan-line slogan-line-accent"><span class="word-excalibu">Excalibu</span> cuida al guardia.</span>
-      </blockquote>
-      <p class="brand-tagline">Bitácora · QR · GPS · Cámaras · Costa Rica</p>
-    </div>
-
-    <div id="clientBrandBlock" class="client-brand-head hidden">
-      <img id="clientLogo" alt="" class="brand-logo hidden" width="120" height="120" style="object-fit:contain;background:#0d1420;border-radius:12px;padding:8px" />
-      <h1 id="clientCompanyTitle"></h1>
-      <p id="clientTagline" class="client-brand-tagline"></p>
-      <p id="clientPhoneWrap" class="client-brand-phone hidden">
-        <a id="clientPhone" href="#"></a>
-      </p>
-      <p class="login-powered">Acceso operativo · Excalibu Sentinel</p>
-    </div>
-
-    <div class="partner-strip" aria-label="Distribuidor AbSol@r">
-      <img src="/static/absolar-logo.png?v=1" alt="AbSol@r Costa Rica" class="partner-logo" width="132" height="32" />
-      <p class="partner-text">Distribución e instalación · Huacas / Guanacaste</p>
-      <p class="partner-links">
-        <a href="https://wa.me/50663706546" target="_blank" rel="noopener">WhatsApp +506 6370-6546</a>
-        ·
-        <a href="https://absolar.onrender.com/web/seguridad.html" target="_blank" rel="noopener">Cotizar cámaras + Sentinel</a>
-      </p>
-    </div>
-    <form id="loginForm" class="form-grid">
-      <label>Usuario<input name="username" required autocomplete="username" /></label>
-      <label>Clave<input name="password" type="password" required autocomplete="current-password" /></label>
-      <details style="font-size:.85rem;color:var(--muted)">
-        <summary style="cursor:pointer;color:var(--teal)">Código de empresa (solo si se lo dieron)</summary>
-        <label style="margin-top:8px">Código<input name="company_code" placeholder="grupo-gomez" autocomplete="off" /></label>
-      </details>
-      <button class="btn btn-primary btn-block" type="submit">Entrar</button>
-    </form>
-    <p id="err" class="error hidden"></p>
-    <p class="muted" style="margin-top:16px;font-size:.78rem">
-      Admin y guardias: mismo login · Portal cliente: <a href="/login?next=/cliente">/cliente</a><br>
-      Ventas / licencias: <a href="/comercial">/comercial</a> · Cliente: lo crea admin en Ajustes.
-    </p>
-  </div>
-  <script src="/static/js/api.js"></script>
-  <script>
-    let brandTimer = null;
-
-    function resetToExcalibuBrand() {
-      document.getElementById("excalibuBrandBlock").classList.remove("hidden");
-      document.getElementById("clientBrandBlock").classList.add("hidden");
-      document.getElementById("clientLogo").classList.add("hidden");
-    }
-
-    function applyBranding(b) {
-      if (!b || !b.code) {
-        resetToExcalibuBrand();
-        return;
-      }
-      document.getElementById("excalibuBrandBlock").classList.add("hidden");
-      document.getElementById("clientBrandBlock").classList.remove("hidden");
-      document.getElementById("clientCompanyTitle").textContent = b.name || b.code;
-      document.getElementById("clientTagline").textContent = b.tagline || "Seguridad privada";
-
-      const phoneWrap = document.getElementById("clientPhoneWrap");
-      const phoneA = document.getElementById("clientPhone");
-      if (b.phone_display) {
-        phoneA.textContent = b.phone_display;
-        phoneA.href = b.whatsapp_url || (b.phone_tel ? "tel:" + b.phone_tel : "#");
-        phoneWrap.classList.remove("hidden");
-      } else {
-        phoneWrap.classList.add("hidden");
-      }
-
-      const clientLogo = document.getElementById("clientLogo");
-      if (b.logo_url) {
-        const sep = b.logo_url.includes("?") ? "&" : "?";
-        clientLogo.src = b.logo_url + sep + "t=" + Date.now();
-        clientLogo.alt = b.name || "Logo";
-        clientLogo.classList.remove("hidden");
-      } else {
-        clientLogo.classList.add("hidden");
-      }
-
-      if (b.code) {
-        const ci = document.querySelector('input[name="company_code"]');
-        if (ci && !ci.value.trim()) ci.value = b.code;
-      }
-      document.title = (b.name || "Acceso") + " — Excalibu Sentinel";
-    }
-
-    async function refreshClientBrand(code) {
-      const c = (code || "").trim().toLowerCase();
-      if (!c) {
-        resetToExcalibuBrand();
-        return;
-      }
-      try {
-        const r = await fetch("/api/branding/" + encodeURIComponent(c));
-        if (!r.ok) throw new Error();
-        applyBranding(await r.json());
-      } catch {
-        resetToExcalibuBrand();
-      }
-    }
-
-    const codeInput = document.querySelector('input[name="company_code"]');
-    if (codeInput) {
-      codeInput.addEventListener("input", () => {
-        clearTimeout(brandTimer);
-        brandTimer = setTimeout(() => refreshClientBrand(codeInput.value), 400);
-      });
-      const prefill =
-        new URLSearchParams(location.search).get("empresa") ||
-        new URLSearchParams(location.search).get("code") ||
-        "";
-      if (prefill) {
-        codeInput.value = prefill;
-        const det = codeInput.closest("details");
-        if (det) det.open = true;
-        refreshClientBrand(prefill);
-      }
-    }
-
-    const userInput = document.querySelector('input[name="username"]');
-    let userBrandTimer = null;
-    if (userInput) {
-      userInput.addEventListener("input", () => {
-        clearTimeout(userBrandTimer);
-        const u = (userInput.value || "").trim();
-        if (u.length < 3) return;
-        userBrandTimer = setTimeout(async () => {
-          try {
-            const r = await fetch("/api/branding/by-user/" + encodeURIComponent(u.toLowerCase()));
-            if (!r.ok) return;
-            applyBranding(await r.json());
-          } catch { /* noop */ }
-        }, 450);
-      });
-      userInput.focus();
-    }
-
-    document.getElementById("loginForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const err = document.getElementById("err");
-      err.classList.add("hidden");
-      const fd = new FormData(e.target);
-      try {
-        const data = await api("/api/auth/login", {
-          method: "POST",
-          body: JSON.stringify({
-            username: fd.get("username"),
-            password: fd.get("password"),
-            company_code: fd.get("company_code") || "",
-          }),
-        });
-        setToken(data.access_token);
-        const role = data.user.role;
-        const next = new URLSearchParams(location.search).get("next");
-        if (next) location.href = next;
-        else if (role === "guard") location.href = "/guardia";
-        else if (role === "client") location.href = "/cliente";
-        else location.href = "/admin";
-      } catch (ex) {
-        err.textContent = ex.message;
-        err.classList.remove("hidden");
-      }
-    });
-  </script>
-</body>
-</html>
-
+<!DOCTYPE html>
+
+<html lang="es">
+
+<head>
+
+  <meta charset="UTF-8" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title>Excalibu Sentinel — acceso</title>
+
+  <link rel="icon" href="/static/favicon.png" type="image/png" />
+
+  <link rel="stylesheet" href="/static/css/app.css?v=6" />
+
+  <link rel="manifest" href="/manifest.json" />
+
+  <style>
+
+    .client-brand-head { text-align: center; margin-bottom: 12px; }
+
+    .client-brand-head .brand-logo { width: 120px; height: 120px; margin: 0 auto 10px; display: block; }
+
+    .client-brand-head h1 { font-size: 1.15rem; line-height: 1.35; margin: 0; font-weight: 700; }
+
+    .client-brand-tagline { margin: 8px 0 0; font-size: .92rem; color: var(--gold); letter-spacing: .04em; text-transform: uppercase; font-weight: 600; }
+
+    .client-brand-phone { margin: 10px 0 0; font-size: 1.05rem; }
+
+    .client-brand-phone a { color: var(--teal); text-decoration: none; font-weight: 600; }
+
+    .client-brand-phone a:hover { text-decoration: underline; }
+
+    .login-powered { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); font-size: .72rem; color: var(--muted); text-align: center; }
+
+  </style>
+
+</head>
+
+<body>
+
+  <div class="login-wrap panel">
+
+    <div id="excalibuBrandBlock">
+
+      <div class="brand-head">
+
+        <img src="/static/excalibu-mark.png?v=5" alt="Excalibu Sentinel" class="brand-logo" width="104" height="104" />
+
+        <div>
+
+          <h1>Excalibu <span class="brand-accent">Sentinel</span></h1>
+
+        </div>
+
+      </div>
+
+      <blockquote class="brand-slogan brand-slogan-compact">
+
+        <span class="slogan-line">Su <span class="word-guardia">guardia</span> cuida el <span class="word-sitio">sitio</span>.</span>
+
+        <span class="slogan-line slogan-line-accent"><span class="word-excalibu">Excalibu</span> cuida al guardia.</span>
+
+      </blockquote>
+
+      <p class="brand-tagline">Bitácora · QR · GPS · Cámaras · Costa Rica</p>
+
+    </div>
+
+
+
+    <div id="clientBrandBlock" class="client-brand-head hidden">
+
+      <img id="clientLogo" alt="" class="brand-logo hidden" width="120" height="120" style="object-fit:contain;background:#0d1420;border-radius:12px;padding:8px" />
+
+      <h1 id="clientCompanyTitle"></h1>
+
+      <p id="clientTagline" class="client-brand-tagline"></p>
+
+      <p id="clientPhoneWrap" class="client-brand-phone hidden">
+
+        <a id="clientPhone" href="#"></a>
+
+      </p>
+
+      <p class="login-powered">Acceso operativo · Excalibu Sentinel</p>
+
+    </div>
+
+
+
+    <div class="partner-strip" aria-label="Distribuidor AbSol@r">
+
+      <img src="/static/absolar-logo.png?v=1" alt="AbSol@r Costa Rica" class="partner-logo" width="132" height="32" />
+
+      <p class="partner-text">Distribución e instalación · Huacas / Guanacaste</p>
+
+      <p class="partner-links">
+
+        <a href="https://wa.me/50663706546" target="_blank" rel="noopener">WhatsApp +506 6370-6546</a>
+
+        ·
+
+        <a href="https://absolar.onrender.com/web/seguridad.html" target="_blank" rel="noopener">Cotizar cámaras + Sentinel</a>
+
+      </p>
+
+    </div>
+
+    <form id="loginForm" class="form-grid">
+
+      <label>Usuario<input name="username" required autocomplete="username" /></label>
+
+      <label>Clave<input name="password" type="password" required autocomplete="current-password" /></label>
+
+      <details style="font-size:.85rem;color:var(--muted)">
+
+        <summary style="cursor:pointer;color:var(--teal)">Código de empresa (solo si se lo dieron)</summary>
+
+        <label style="margin-top:8px">Código<input name="company_code" placeholder="grupo-gomez" autocomplete="off" /></label>
+
+      </details>
+
+      <button class="btn btn-primary btn-block" type="submit">Entrar</button>
+
+    </form>
+
+    <p id="err" class="error hidden"></p>
+
+    <p class="muted" style="margin-top:16px;font-size:.78rem">
+
+      Admin y guardias: mismo login · Portal cliente: <a href="/login?next=/cliente">/cliente</a><br>
+
+      Ventas / licencias: <a href="/comercial">/comercial</a> · Cliente: lo crea admin en Ajustes.
+
+    </p>
+
+  </div>
+
+  <script src="/static/js/api.js"></script>
+
+  <script>
+
+    let brandTimer = null;
+
+
+
+    function resetToExcalibuBrand() {
+
+      document.getElementById("excalibuBrandBlock").classList.remove("hidden");
+
+      document.getElementById("clientBrandBlock").classList.add("hidden");
+
+      document.getElementById("clientLogo").classList.add("hidden");
+
+    }
+
+
+
+    function applyBranding(b) {
+
+      if (!b || !b.code) {
+
+        resetToExcalibuBrand();
+
+        return;
+
+      }
+
+      document.getElementById("excalibuBrandBlock").classList.add("hidden");
+
+      document.getElementById("clientBrandBlock").classList.remove("hidden");
+
+      document.getElementById("clientCompanyTitle").textContent = b.name || b.code;
+
+      document.getElementById("clientTagline").textContent = b.tagline || "Seguridad privada";
+
+
+
+      const phoneWrap = document.getElementById("clientPhoneWrap");
+
+      const phoneA = document.getElementById("clientPhone");
+
+      if (b.phone_display) {
+
+        phoneA.textContent = b.phone_display;
+
+        phoneA.href = b.whatsapp_url || (b.phone_tel ? "tel:" + b.phone_tel : "#");
+
+        phoneWrap.classList.remove("hidden");
+
+      } else {
+
+        phoneWrap.classList.add("hidden");
+
+      }
+
+
+
+      const clientLogo = document.getElementById("clientLogo");
+
+      const code = (b.code || "").toLowerCase();
+
+      function useStaticLogo() {
+
+        if (!code) { clientLogo.classList.add("hidden"); return; }
+
+        clientLogo.onerror = null;
+
+        clientLogo.src = "/static/clients/" + encodeURIComponent(code) + "-logo.jpeg?v=1";
+
+        clientLogo.alt = b.name || "Logo";
+
+        clientLogo.classList.remove("hidden");
+
+      }
+
+      if (b.logo_url) {
+
+        const sep = b.logo_url.includes("?") ? "&" : "?";
+
+        clientLogo.onerror = useStaticLogo;
+
+        clientLogo.src = b.logo_url + sep + "t=" + Date.now();
+
+        clientLogo.alt = b.name || "Logo";
+
+        clientLogo.classList.remove("hidden");
+
+      } else if (code) {
+
+        useStaticLogo();
+
+      } else {
+
+        clientLogo.classList.add("hidden");
+
+      }
+
+
+
+      if (b.code) {
+
+        const ci = document.querySelector('input[name="company_code"]');
+
+        if (ci && !ci.value.trim()) ci.value = b.code;
+
+      }
+
+      document.title = (b.name || "Acceso") + " — Excalibu Sentinel";
+
+    }
+
+
+
+    async function refreshClientBrand(code) {
+
+      const c = (code || "").trim().toLowerCase();
+
+      if (!c) {
+
+        resetToExcalibuBrand();
+
+        return;
+
+      }
+
+      try {
+
+        const r = await fetch("/api/branding/" + encodeURIComponent(c));
+
+        if (!r.ok) throw new Error();
+
+        applyBranding(await r.json());
+
+      } catch {
+
+        resetToExcalibuBrand();
+
+      }
+
+    }
+
+
+
+    const codeInput = document.querySelector('input[name="company_code"]');
+
+    if (codeInput) {
+
+      codeInput.addEventListener("input", () => {
+
+        clearTimeout(brandTimer);
+
+        brandTimer = setTimeout(() => refreshClientBrand(codeInput.value), 400);
+
+      });
+
+      const prefill =
+
+        new URLSearchParams(location.search).get("empresa") ||
+
+        new URLSearchParams(location.search).get("code") ||
+
+        "";
+
+      if (prefill) {
+
+        codeInput.value = prefill;
+
+        const det = codeInput.closest("details");
+
+        if (det) det.open = true;
+
+        refreshClientBrand(prefill);
+
+      }
+
+    }
+
+
+
+    const userInput = document.querySelector('input[name="username"]');
+
+    let userBrandTimer = null;
+
+    if (userInput) {
+
+      userInput.addEventListener("input", () => {
+
+        clearTimeout(userBrandTimer);
+
+        const u = (userInput.value || "").trim();
+
+        if (u.length < 3) return;
+
+        userBrandTimer = setTimeout(async () => {
+
+          try {
+
+            const r = await fetch("/api/branding/by-user/" + encodeURIComponent(u.toLowerCase()));
+
+            if (!r.ok) return;
+
+            applyBranding(await r.json());
+
+          } catch { /* noop */ }
+
+        }, 450);
+
+      });
+
+      userInput.focus();
+
+    }
+
+
+
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+
+      e.preventDefault();
+
+      const err = document.getElementById("err");
+
+      err.classList.add("hidden");
+
+      const fd = new FormData(e.target);
+
+      try {
+
+        const data = await api("/api/auth/login", {
+
+          method: "POST",
+
+          body: JSON.stringify({
+
+            username: fd.get("username"),
+
+            password: fd.get("password"),
+
+            company_code: fd.get("company_code") || "",
+
+          }),
+
+        });
+
+        setToken(data.access_token);
+
+        const role = data.user.role;
+
+        const next = new URLSearchParams(location.search).get("next");
+
+        if (next) location.href = next;
+
+        else if (role === "guard") location.href = "/guardia";
+
+        else if (role === "client") location.href = "/cliente";
+
+        else location.href = "/admin";
+
+      } catch (ex) {
+
+        err.textContent = ex.message;
+
+        err.classList.remove("hidden");
+
+      }
+
+    });
+
+  </script>
+
+</body>
+
+</html>
+
+

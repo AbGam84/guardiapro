@@ -109,13 +109,22 @@ def _client_login_paths(company: Company) -> dict[str, str]:
     code = company.code
     login_path = f"/login?empresa={code}"
     access_path = f"/acceso/{code}"
+    supervisor_path = f"/acceso/{code}/supervisor"
+    oficial_path = f"/oficial?empresa={code}"
     base = PUBLIC_BASE_URL.rstrip("/") if PUBLIC_BASE_URL else ""
+    def _abs(path: str) -> str:
+        return f"{base}{path}" if base else path
+
     return {
         "company_code": code,
         "client_login_path": login_path,
         "client_access_path": access_path,
-        "client_login_url": f"{base}{login_path}" if base else login_path,
-        "client_access_url": f"{base}{access_path}" if base else access_path,
+        "client_login_url": _abs(login_path),
+        "client_access_url": _abs(access_path),
+        "supervisor_login_path": supervisor_path,
+        "supervisor_login_url": _abs(supervisor_path),
+        "oficial_branded_path": oficial_path,
+        "oficial_branded_url": _abs(oficial_path),
     }
 
 
@@ -157,9 +166,18 @@ def get_vendor(creds=Depends(security)):
     return {"username": VENDOR_USERNAME, "name": VENDOR_NAME}
 
 
-def _guard_payload(u: User) -> dict:
+def _guard_payload(u: User, company: Company | None = None) -> dict:
     d = user_dict(u)
-    d["field_login_path"] = f"/oficial?code={u.field_code}" if u.field_code else ""
+    fc = u.field_code or ""
+    if fc and company:
+        d["field_login_path"] = f"/oficial?empresa={company.code}&code={fc}"
+        d["field_login_path_branded"] = f"/acceso/{company.code}/oficial?code={fc}"
+    elif fc:
+        d["field_login_path"] = f"/oficial?code={fc}"
+        d["field_login_path_branded"] = d["field_login_path"]
+    else:
+        d["field_login_path"] = ""
+        d["field_login_path_branded"] = ""
     return d
 
 
@@ -333,7 +351,7 @@ def vendor_company_detail(company_id: int, db: Session = Depends(get_db), vendor
         for u in users:
             db.refresh(u)
     sites = db.query(ClientSite).filter(ClientSite.company_id == company_id, ClientSite.active.is_(True)).count()
-    guards = [_guard_payload(u) for u in users if u.role == "guard"]
+    guards = [_guard_payload(u, company) for u in users if u.role == "guard"]
     admins = [user_dict(u) for u in users if u.role == "admin"]
     supervisors = [user_dict(u) for u in users if u.role == "supervisor"]
     return {
@@ -398,7 +416,7 @@ def vendor_create_user(
     db.refresh(row)
     out = user_dict(row)
     if role == "guard":
-        out = _guard_payload(row)
+        out = _guard_payload(row, company)
     portal = "/admin" if role in ("admin", "supervisor") else "/oficial"
     creds = _client_credentials_block(company, row.username, plain, portal)
     creds["field_code"] = row.field_code or None
@@ -558,4 +576,5 @@ def vendor_regenerate_field_code(
     guard.field_code = generate_field_code(db, guard.company_id)
     db.commit()
     db.refresh(guard)
-    return {"guard": _guard_payload(guard)}
+    company = db.query(Company).filter(Company.id == guard.company_id).first()
+    return {"guard": _guard_payload(guard, company)}

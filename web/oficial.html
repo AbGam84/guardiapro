@@ -6,18 +6,32 @@
   <meta name="theme-color" content="#12c4a0" />
   <title>Excalibu Sentinel — oficial</title>
   <link rel="icon" href="/static/favicon.png" type="image/png" />
-  <link rel="stylesheet" href="/static/css/app.css?v=5" />
+  <link rel="stylesheet" href="/static/css/app.css?v=7" />
   <link rel="manifest" href="/manifest.json" />
+  <style>
+    .client-brand-head { text-align: center; margin-bottom: 12px; }
+    .client-brand-tagline { margin: 8px 0 0; font-size: .92rem; color: var(--gold); letter-spacing: .04em; text-transform: uppercase; font-weight: 600; }
+    .client-brand-phone { margin: 10px 0 0; font-size: 1.05rem; }
+    .client-brand-phone a { color: var(--teal); text-decoration: none; font-weight: 600; }
+    .login-powered { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); font-size: .72rem; color: var(--muted); text-align: center; }
+  </style>
 </head>
 <body>
   <div class="login-wrap panel" style="max-width:400px;margin:6vh auto">
-    <div class="brand-head" style="justify-content:center">
+    <div id="excalibuHead" class="brand-head" style="justify-content:center">
       <img src="/static/excalibu-mark.png?v=5" alt="Excalibu Sentinel" class="brand-logo" width="88" height="88" />
     </div>
-    <h1 style="text-align:center;font-size:1.35rem">Acceso oficial</h1>
-    <p class="muted" style="text-align:center;margin:0 0 16px">Código de 6 dígitos — solo este celular, solo su turno.</p>
+    <div id="clientHead" class="client-brand-head hidden">
+      <img id="clientLogo" alt="" class="brand-logo hidden" width="120" height="120" style="object-fit:contain;background:#0d1420;border-radius:12px;padding:8px;margin:0 auto 10px;display:block" />
+      <h1 id="clientTitle" style="font-size:1.15rem;line-height:1.35;margin:0;font-weight:700"></h1>
+      <p id="clientTagline" class="client-brand-tagline"></p>
+      <p id="clientPhoneWrap" class="client-brand-phone hidden"><a id="clientPhone" href="#"></a></p>
+      <p class="login-powered">Acceso oficial · Excalibu Sentinel</p>
+    </div>
+    <h2 style="text-align:center;font-size:1.15rem;margin:0 0 8px">Código del oficial</h2>
+    <p class="muted" style="text-align:center;margin:0 0 16px">6 dígitos — solo este celular, solo su turno.</p>
     <form id="codeForm" class="form-grid">
-      <label>Código del oficial
+      <label>Código
         <input name="field_code" id="fieldCode" inputmode="numeric" pattern="[0-9]*" maxlength="6" required placeholder="123456" autocomplete="off" style="font-size:1.5rem;letter-spacing:.2em;text-align:center" />
       </label>
       <button class="btn btn-primary btn-block" type="submit">Entrar a bitácora</button>
@@ -25,11 +39,43 @@
     <p id="err" class="error hidden"></p>
     <p class="muted" style="margin-top:16px;font-size:.78rem;text-align:center">
       El código lo entrega administración.<br>
-      <a href="/login">Entrada admin / supervisor</a>
+      <a id="supervisorLink" href="/login">Supervisor / admin</a>
     </p>
   </div>
   <script src="/static/js/api.js"></script>
   <script>
+    function staticLogoForCode(code) {
+      return "/static/clients/" + encodeURIComponent(code) + "-logo.jpeg?v=1";
+    }
+
+    function applyClientBrand(b) {
+      if (!b || !b.code) return;
+      document.getElementById("excalibuHead").classList.add("hidden");
+      document.getElementById("clientHead").classList.remove("hidden");
+      document.getElementById("clientTitle").textContent = b.name || b.code;
+      document.getElementById("clientTagline").textContent = b.tagline || "Seguridad privada";
+      const phoneWrap = document.getElementById("clientPhoneWrap");
+      const phoneA = document.getElementById("clientPhone");
+      if (b.phone_display) {
+        phoneA.textContent = b.phone_display;
+        phoneA.href = b.whatsapp_url || (b.phone_tel ? "tel:" + b.phone_tel : "#");
+        phoneWrap.classList.remove("hidden");
+      } else phoneWrap.classList.add("hidden");
+      const img = document.getElementById("clientLogo");
+      const code = (b.code || "").toLowerCase();
+      const tryStatic = () => { img.src = staticLogoForCode(code); img.classList.remove("hidden"); };
+      if (b.logo_url) {
+        const sep = b.logo_url.includes("?") ? "&" : "?";
+        img.onerror = tryStatic;
+        img.src = b.logo_url + sep + "t=" + Date.now();
+        img.alt = b.name || "Logo";
+        img.classList.remove("hidden");
+      } else tryStatic();
+      document.title = (b.name || "Oficial") + " — Excalibu Sentinel";
+      const sup = document.getElementById("supervisorLink");
+      if (sup) sup.href = "/acceso/" + encodeURIComponent(code) + "/supervisor";
+    }
+
     async function loginWithCode(code) {
       const data = await api("/api/auth/login-code", {
         method: "POST",
@@ -40,6 +86,14 @@
     }
 
     const params = new URLSearchParams(location.search);
+    const empresa = (params.get("empresa") || "").trim().toLowerCase();
+    if (empresa) {
+      fetch("/api/branding/" + encodeURIComponent(empresa))
+        .then(r => r.ok ? r.json() : null)
+        .then(b => { if (b) applyClientBrand(b); })
+        .catch(() => {});
+    }
+
     const pre = (params.get("code") || "").replace(/\D/g, "");
     if (pre.length >= 4) {
       document.getElementById("fieldCode").value = pre;

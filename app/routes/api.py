@@ -240,7 +240,9 @@ def serve_company_logo(company_id: int, db: Session = Depends(get_db)):
     company = db.query(Company).filter(Company.id == cid, Company.active.is_(True)).first()
     if not company:
         raise HTTPException(status_code=404, detail="Empresa no encontrada")
-    path = company_logo_path(company.id, company.logo_filename or "")
+    from app.company_logo import resolve_company_logo_file
+
+    path = resolve_company_logo_file(company.id, company.logo_filename or "", company.code or "")
     if not path:
         raise HTTPException(status_code=404, detail="Sin logo")
     return FileResponse(path, media_type=logo_media_type(path), headers={"Cache-Control": "no-store"})
