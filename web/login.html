@@ -276,7 +276,29 @@
 
       } catch {
 
-        resetToExcalibuBrand();
+        const staticLogo = "/static/clients/" + encodeURIComponent(c) + "-logo.jpeg?v=1";
+
+        fetch(staticLogo, { method: "HEAD" })
+
+          .then(r => {
+
+            if (!r.ok) { resetToExcalibuBrand(); return; }
+
+            applyBranding({
+
+              code: c,
+
+              name: c.replace(/-/g, " ").replace(/\b\w/g, ch => ch.toUpperCase()),
+
+              tagline: "Seguridad privada",
+
+              logo_url: staticLogo,
+
+            });
+
+          })
+
+          .catch(() => resetToExcalibuBrand());
 
       }
 
@@ -312,7 +334,15 @@
 
         if (det) det.open = true;
 
-        refreshClientBrand(prefill);
+        const pc = prefill.trim().toLowerCase();
+
+        const quickLogo = "/static/clients/" + encodeURIComponent(pc) + "-logo.jpeg?v=1";
+
+        fetch(quickLogo, { method: "HEAD" }).then(r => {
+
+          if (r.ok) applyBranding({ code: pc, name: pc, tagline: "Seguridad privada", logo_url: quickLogo });
+
+        }).finally(() => refreshClientBrand(prefill));
 
       }
 

@@ -208,13 +208,22 @@ def login_field_code(payload: FieldCodeLoginIn, db: Session = Depends(get_db)):
 
 @router.get("/api/branding/{company_code}")
 def public_branding(company_code: str, db: Session = Depends(get_db)):
+    from app.static_clients import static_branding_payload
+    from app.seed import GRUPO_GOMEZ_CODE, ensure_grupo_gomez_client
+
     code = (company_code or "").strip().lower()
     if not code:
         raise HTTPException(status_code=404, detail="Empresa no encontrada")
     company = db.query(Company).filter(Company.code == code, Company.active.is_(True)).first()
-    if not company:
-        raise HTTPException(status_code=404, detail="Empresa no encontrada")
-    return _public_branding_payload(company)
+    if not company and code == GRUPO_GOMEZ_CODE:
+        ensure_grupo_gomez_client(db)
+        company = db.query(Company).filter(Company.code == code, Company.active.is_(True)).first()
+    if company:
+        return _public_branding_payload(company)
+    fallback = static_branding_payload(code)
+    if fallback:
+        return fallback
+    raise HTTPException(status_code=404, detail="Empresa no encontrada")
 
 
 @router.get("/api/branding/by-user/{username}")

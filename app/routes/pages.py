@@ -33,7 +33,11 @@ def _login_html(request: Request, db: Session) -> HTMLResponse:
     headers = {"Cache-Control": "no-store, no-cache, must-revalidate"}
     code = _safe_company_code(request.query_params.get("empresa") or request.query_params.get("code"))
     if code:
-        company = db.query(Company).filter(Company.code == code, Company.active.is_(True)).first()
+        company = None
+        try:
+            company = _active_company(db, code)
+        except HTTPException:
+            company = None
         if company:
             nxt = (request.query_params.get("next") or "").strip()
             portal = (request.query_params.get("portal") or "").strip().lower()
@@ -77,10 +81,20 @@ def _login_html(request: Request, db: Session) -> HTMLResponse:
 
 
 def _active_company(db: Session, raw_code: str) -> Company:
+    from app.seed import GRUPO_GOMEZ_CODE, ensure_grupo_gomez_client
+    from app.static_clients import static_branding_payload
+
     code = _safe_company_code(raw_code)
     if not code:
         raise HTTPException(status_code=404, detail="Empresa no encontrada")
     company = db.query(Company).filter(Company.code == code, Company.active.is_(True)).first()
+    if not company and code == GRUPO_GOMEZ_CODE:
+        ensure_grupo_gomez_client(db)
+        company = db.query(Company).filter(Company.code == code, Company.active.is_(True)).first()
+    if not company:
+        if static_branding_payload(code):
+            ensure_grupo_gomez_client(db)
+            company = db.query(Company).filter(Company.code == code, Company.active.is_(True)).first()
     if not company:
         raise HTTPException(status_code=404, detail="Empresa no encontrada")
     return company

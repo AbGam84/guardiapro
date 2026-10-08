@@ -40,7 +40,9 @@ def public_branding_payload(company: Company) -> dict:
         "phone_display": phone_display,
         "phone_tel": phone_tel,
         "whatsapp_url": f"https://wa.me/{wa_digits}" if len(wa_digits) >= 11 else "",
-        "logo_url": company_dict(company, include_subscription=False).get("logo_url") or "",
+        "logo_url": static_client_logo_web_url(company.code or "")
+        or company_dict(company, include_subscription=False).get("logo_url")
+        or "",
         "has_logo": bool(
             resolve_company_logo_file(company.id, company.logo_filename or "", company.code or "")
             or static_client_logo_web_url(company.code or "")

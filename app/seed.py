@@ -1,4 +1,5 @@
 """Datos iniciales — producción limpia (sin demo)."""
+import os
 from pathlib import Path
 
 from sqlalchemy.orm import Session
@@ -36,8 +37,7 @@ GRUPO_GOMEZ_CODE = "grupo-gomez"
 GRUPO_GOMEZ_LOGO = (
     Path(__file__).resolve().parents[1] / "web" / "static" / "clients" / "grupo-gomez-logo.jpeg"
 )
-GRUPO_GOMEZ_ADMIN_USER = "admin.grupogomez"
-GRUPO_GOMEZ_ADMIN_PASS = "Gomez2026!"
+GRUPO_GOMEZ_ADMIN_USER = "admin.gomez"
 _DEMO_CODES = {"demo-seguridad", "demo"}
 _DEMO_USERNAMES = {"juan", "maria", "cliente", "supervisor"}
 
@@ -177,7 +177,9 @@ def ensure_grupo_gomez_client(db: Session) -> None:
         company = Company(
             code=GRUPO_GOMEZ_CODE,
             name="Grupo Gómez y Asociados",
-            alert_whatsapp=SUPPORT_WHATSAPP,
+            phone="+506 6070 9197",
+            alert_whatsapp="50660709197",
+            brand_tagline="Seguridad privada",
             subscription_plan="monthly",
             monthly_fee_crc=58000,
             max_officers=10,
@@ -188,6 +190,9 @@ def ensure_grupo_gomez_client(db: Session) -> None:
         db.flush()
     else:
         company.name = "Grupo Gómez y Asociados"
+        company.phone = company.phone or "+506 6070 9197"
+        company.alert_whatsapp = company.alert_whatsapp or "50660709197"
+        company.brand_tagline = company.brand_tagline or "Seguridad privada"
         company.subscription_plan = "monthly"
         if not company.monthly_fee_crc:
             company.monthly_fee_crc = 58000
@@ -201,8 +206,11 @@ def ensure_grupo_gomez_client(db: Session) -> None:
             company.id, GRUPO_GOMEZ_LOGO.read_bytes(), GRUPO_GOMEZ_LOGO.name
         )
 
+    admin_pass = (
+        os.getenv("GUARDIA_SYNC_ADMIN_PASSWORD") or os.getenv("GUARDIA_GOMEZ_ADMIN_PASSWORD") or "Gomez2026!"
+    )
     admin = db.query(User).filter(User.username == GRUPO_GOMEZ_ADMIN_USER).first()
-    pwd = hash_password(GRUPO_GOMEZ_ADMIN_PASS)
+    pwd = hash_password(admin_pass)
     if not admin:
         db.add(
             User(
@@ -218,7 +226,7 @@ def ensure_grupo_gomez_client(db: Session) -> None:
         admin.company_id = company.id
         admin.active = True
         admin.role = "admin"
-        if not verify_password(GRUPO_GOMEZ_ADMIN_PASS, admin.password_hash):
+        if os.getenv("GUARDIA_SYNC_ADMIN_PASSWORD") and not verify_password(admin_pass, admin.password_hash):
             admin.password_hash = pwd
     db.commit()
 

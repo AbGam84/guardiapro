@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import html
 
+from app.company_logo import static_client_logo_web_url
 from app.models import Company
 from app.public_brand import public_branding_payload
 
@@ -20,12 +21,15 @@ def branded_login_html(
     code = html.escape(company.code)
     portal_title_esc = html.escape(portal_title)
     logo_block = ""
-    if b.get("logo_url"):
-        raw_logo = b["logo_url"]
+    static_logo = static_client_logo_web_url(company.code or "")
+    raw_logo = static_logo or b.get("logo_url") or ""
+    if raw_logo:
         sep = "&" if "?" in raw_logo else "?"
         logo_src = html.escape(f"{raw_logo}{sep}v={company.id}")
+        fallback = html.escape(static_logo) if static_logo and static_logo != raw_logo else ""
+        onerr = f' onerror="this.onerror=null;this.src=\'{fallback}\'"' if fallback else ""
         logo_block = (
-            f'<img src="{logo_src}" alt="{name}" class="brand-logo" width="120" height="120" '
+            f'<img src="{logo_src}" alt="{name}" class="brand-logo" width="120" height="120"{onerr} '
             'style="object-fit:contain;background:#0d1420;border-radius:12px;padding:8px;margin:0 auto 10px;display:block" />'
         )
     phone_block = ""
@@ -109,12 +113,15 @@ def branded_oficial_html(company: Company, *, prefill_code: str = "") -> str:
     tagline = html.escape(b.get("tagline") or "Seguridad privada")
     code = html.escape(company.code)
     logo_block = ""
-    if b.get("logo_url"):
-        raw_logo = b["logo_url"]
+    static_logo = static_client_logo_web_url(company.code or "")
+    raw_logo = static_logo or b.get("logo_url") or ""
+    if raw_logo:
         sep = "&" if "?" in raw_logo else "?"
         logo_src = html.escape(f"{raw_logo}{sep}v={company.id}")
+        fallback = html.escape(static_logo) if static_logo and static_logo != raw_logo else ""
+        onerr = f' onerror="this.onerror=null;this.src=\'{fallback}\'"' if fallback else ""
         logo_block = (
-            f'<img src="{logo_src}" alt="{name}" class="brand-logo" width="120" height="120" '
+            f'<img src="{logo_src}" alt="{name}" class="brand-logo" width="120" height="120"{onerr} '
             'style="object-fit:contain;background:#0d1420;border-radius:12px;padding:8px;margin:0 auto 10px;display:block" />'
         )
     phone_block = ""

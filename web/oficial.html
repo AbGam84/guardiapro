@@ -87,7 +87,16 @@
 
     const params = new URLSearchParams(location.search);
     const empresa = (params.get("empresa") || "").trim().toLowerCase();
+    function staticBrand(code) {
+      return {
+        code,
+        name: code.replace(/-/g, " ").replace(/\b\w/g, ch => ch.toUpperCase()),
+        tagline: "Seguridad privada",
+        logo_url: "/static/clients/" + encodeURIComponent(code) + "-logo.jpeg?v=1",
+      };
+    }
     if (empresa) {
+      applyClientBrand(staticBrand(empresa));
       fetch("/api/branding/" + encodeURIComponent(empresa))
         .then(r => r.ok ? r.json() : null)
         .then(b => { if (b) applyClientBrand(b); })

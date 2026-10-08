@@ -12,7 +12,7 @@ from app.paths import WEB
 from app.routes import register_routes
 from app.field_codes import generate_field_code
 from app.models import User
-from app.seed import ensure_commercial_empty_baseline
+from app.seed import ensure_commercial_empty_baseline, ensure_grupo_gomez_client
 
 
 @asynccontextmanager
@@ -22,6 +22,7 @@ async def lifespan(app: FastAPI):
     db = next(get_db())
     try:
         ensure_commercial_empty_baseline(db)
+        ensure_grupo_gomez_client(db)
         guards_no_code = (
             db.query(User)
             .filter(User.role == "guard", User.active.is_(True), User.field_code == "")
